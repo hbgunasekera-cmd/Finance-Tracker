@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
+
 <style>
 :root[data-theme="light"] {
     --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --sub: #64748b;
@@ -682,18 +683,12 @@ button, .nav-item, .list-item, [onclick] {
     </label>
     
     <div style="display: flex; flex-direction: column; gap: 12px;">
-        <div style="background: var(--accent); padding: 10px; border-radius: 8px;">
-            <small style="color:var(--sub); display:block; margin-bottom:5px;">Verify Current Identity</small>
-            <input type="password" id="verifyCurrentPass" placeholder="Current Password" style="margin:0;">
-        </div>
-
-        <hr style="border:0; border-top:1px solid var(--border); margin: 5px 0;">
-
-        <input type="text" id="newUsername" placeholder="New Username">
-        <input type="password" id="newPassword" placeholder="New Password">
+        
+        <input type="password" id="oldPass" placeholder="Current Password">
+        <input type="password" id="newPass" placeholder="New Password">
         
         <button class="btn-p" onclick="updateCredentials()" style="width:100%; margin-top: 5px;">
-            Update Access Keys
+            Update Password
         </button>
     </div>
 </div>
@@ -822,49 +817,55 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 async function updateCredentials() {
-    const currentPass = document.getElementById('verifyCurrentPass').value;
-    const newUser = document.getElementById('newUsername').value;
-    const newPass = document.getElementById('newPassword').value;
+    const hasher = window.bcrypt || (window.dcodeIO && window.dcodeIO.bcrypt);
+    const oldPassEl = document.getElementById('oldPass');
+    const newPassEl = document.getElementById('newPass');
 
-    if (!currentPass || !newUser || !newPass) {
-        return msg("Verification and new details required");
-    }
+    // Safety Check: Ensure UI elements exist
+    if (!oldPassEl || !newPassEl) return msg("UI Error: Input fields missing");
 
     try {
-        // 1. Verify current password hash
-        const { data: creds, error: fetchErr } = await supa
-            .from('User_Credentials')
-            .select('password')
-            .eq('id', 1)
-            .single();
+        // 1. Fetch the hash directly from the database
+        const { data, error } = await supa
+    .from('User_Credentials')
+    .select('password') 
+    .eq('id', 1)
+    .single();
 
-        const dcode = window.bcrypt;
-        if (fetchErr || !dcode.compareSync(currentPass, creds.password)) {
-            msg("Current password incorrect!");
-            return;
+// 2. Audit: Check for 'password' instead of 'val'
+if (error || !data || !data.password) { 
+    console.error("Audit Error: System password record (hash) is missing from DB.");
+    return msg("Error: system password record not found");
+}
+
+const storedHash = data.password; // Changed from data.val to data.password
+        const userInput = oldPassEl.value;
+
+        // 3. Perform comparison (Both are now guaranteed to be strings)
+        const isMatch = hasher.compareSync(userInput, storedHash);
+
+        if (!isMatch) {
+            return msg("Current password incorrect");
         }
 
-        // 2. Hash the NEW password before updating
-        const salt = dcode.genSaltSync(10);
-        const hashedNewPassword = dcode.hashSync(newPass, salt);
+        // 4. Hash and Update the new password
+        const salt = hasher.genSaltSync(10);
+        const newHash = hasher.hashSync(newPassEl.value, salt);
 
-        // 3. Perform Update with the hash
-        const { error: updateErr } = await supa
+        const { updateError } = await supa
             .from('User_Credentials')
-            .update({ 
-                username: newUser, 
-                password: hashedNewPassword // Save the hash, not the text
-            })
+            .update({ password: newHash })
             .eq('id', 1);
 
-        if (updateErr) {
-            msg("Update failed: " + updateErr.message);
-        } else {
-            msg("Security Updated! Restarting...");
-            setTimeout(() => window.location.reload(), 2000);
-        }
+        if (updateError) throw updateError;
+
+        msg("Credentials updated successfully");
+        oldPassEl.value = '';
+        newPassEl.value = '';
+        
     } catch (e) {
-        msg("Security Engine Error");
+        console.error("Security Engine Error:", e);
+        msg("Update failed: Illegal arguments prevented");
     }
 }
 
@@ -1240,68 +1241,57 @@ async function saveTx() {
     const person = document.getElementById('eLender').value; 
 
     if (!amt || amt <= 0) return msg("Please enter a valid amount");
-    
-    // 1. VEHICLE REMARK LOGIC
-    // List from user request: Fuel, Service & Repairs, Legal, Parking
-    const vehicleRequiredSubs = ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "Parking"];
-    if (cat === "Transportation" && vehicleRequiredSubs.includes(sub) && vehicle) {
-        // Format: [Registration Number] - Original Remark
-        rem = `${vehicle} - ${rem}`;
-    }
 
-    // 2. RECORD PRIMARY TRANSACTION
+    // Record the primary Transaction
     const { error: txErr } = await supa.from('Transaction_Records').insert([{ 
         Date: date, Account: acc, Type: type, Category: cat, Subcategory: sub, Amount: amt, Remark: rem
     }]);
     
     if (txErr) return msg("Transaction log failed");
 
-    // 3. FINANCE MANAGEMENT LEDGER LOGIC
+    // FINANCE MANAGEMENT LEDGER LOGIC
     if (cat === "Debt & Finance" && person) {
         let amountChange = 0;
         let ledgerType = "";
 
-        // Standardize the subcategory for safer comparison
-        const subCheck = sub.toLowerCase().trim();
+        // Standardize the subcategory string for comparison
+        const subCheck = sub.replace(/\s/g, '').toLowerCase();
 
-        // Matching logic based on your Category List
-        if (type === "Income" && subCheck.includes("loan") && !subCheck.includes("repayment")) {
+        if (type === "Income" && subCheck.includes("loan(borrowing)")) {
             amountChange = amt; ledgerType = "Borrowing";
-        } else if (type === "Expense" && subCheck.includes("lending")) {
+        } else if (type === "Expense" && subCheck === "lending") {
             amountChange = amt; ledgerType = "Lending";
-        } else if (type === "Expense" && subCheck.includes("loan repayment")) {
+        } else if (type === "Expense" && subCheck.includes("loanrepayment")) {
             amountChange = -amt; ledgerType = "Borrowing";
-        } else if (type === "Income" && subCheck.includes("debt collection")) {
+        } else if (type === "Income" && subCheck.includes("debtcollection")) {
             amountChange = -amt; ledgerType = "Lending";
         }
 
         if (amountChange !== 0) {
-            // Check for existing active record for this person
+            // Check for existing record
             const { data: existing, error: fetchErr } = await supa.from('Finance_Management')
                 .select('*')
-                .eq('Person_Name', person) 
+                .eq('Person_Name', person) // Ensure this matches your DB column name exactly
                 .eq('Status', 'Active')
                 .maybeSingle();
 
             if (existing) {
-                // Update existing record
                 const newBal = Math.max(0, existing.Amount + amountChange);
                 const { error: updErr } = await supa.from('Finance_Management').update({
-                    Amount: newBal,
-                    Status: newBal <= 0 ? 'Settled' : 'Active',
-                    Last_Update: date 
-                }).eq('id', existing.id);
+    Amount: newBal,
+    Status: newBal <= 0 ? 'Settled' : 'Active',
+    Last_Update: date // Make sure this is "Last_Update" in the DB
+}).eq('id', existing.id);
                 
                 if (updErr) console.error("Ledger Update Error:", updErr);
             } else if (amountChange > 0) {
-                // Insert new record if no active one exists and we are adding debt
+                // Only create new if we are adding debt/lending
                 const { error: insErr } = await supa.from('Finance_Management').insert([{
                     Person_Name: person,
                     Amount: amt,
                     Type: ledgerType,
                     Date: date,
-                    Status: 'Active',
-                    Last_Update: date
+                    Status: 'Active'
                 }]);
                 
                 if (insErr) console.error("Ledger Insert Error:", insErr);
