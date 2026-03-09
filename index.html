@@ -1242,6 +1242,12 @@ async function saveTx() {
 
     if (!amt || amt <= 0) return msg("Please enter a valid amount");
 
+    // Handle Vehicle Remarks
+const vehicleTriggers = ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "Parking"];
+    if (cat === "Transportation" && vehicleTriggers.includes(sub)) {
+        if (vehicle) rem = rem ? `${vehicle} - ${rem}` : vehicle;
+    }
+    
     // Record the primary Transaction
     const { error: txErr } = await supa.from('Transaction_Records').insert([{ 
         Date: date, Account: acc, Type: type, Category: cat, Subcategory: sub, Amount: amt, Remark: rem
@@ -1249,7 +1255,7 @@ async function saveTx() {
     
     if (txErr) return msg("Transaction log failed");
 
-    // FINANCE MANAGEMENT LEDGER LOGIC
+    // Update Finance Management (Loans/Lending)
     if (cat === "Debt & Finance" && person) {
         let amountChange = 0;
         let ledgerType = "";
