@@ -1238,68 +1238,91 @@ async function saveTx() {
     const amt = parseFloat(document.getElementById('eAmt').value);
     let rem = document.getElementById('eRem').value;
     const vehicle = document.getElementById('eVeh').value;
-    const person = document.getElementById('eLender').value; 
+    
+    // Check if lender/person is from a dropdown or a "New" input field
+    const personSelect = document.getElementById('eLender').value;
+    const personNameInput = document.getElementById('newLenderName') ? document.getElementById('newLenderName').value.trim() : "";
+    const person = personSelect === "New" ? personNameInput : personSelect;
 
     if (!amt || amt <= 0) return msg("Please enter a valid amount");
+    if ((cat === "Debt & Finance") && !person) return msg("Please specify a person/lender");
 
-    // Handle Vehicle Remarks
-const vehicleTriggers = ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "Parking"];
+    // Handle Vehicle Remarks for Transportation
+    const vehicleTriggers = ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "Parking"];
     if (cat === "Transportation" && vehicleTriggers.includes(sub)) {
         if (vehicle) rem = rem ? `${vehicle} - ${rem}` : vehicle;
     }
-    
-    // Record the primary Transaction
-    const { error: txErr } = await supa.from('Transaction_Records').insert([{ 
-        Date: date, Account: acc, Type: type, Category: cat, Subcategory: sub, Amount: amt, Remark: rem
+
+    // 1. Record the primary Transaction
+    const { error: txErr } = await supa.from('Transaction_Records').insert([{
+        Date: date,
+        Account: acc,
+        Type: type,
+        Category: cat,
+        Subcategory: sub,
+        Amount: amt,
+        Remark: rem
     }]);
-    
+
     if (txErr) return msg("Transaction log failed");
 
-    // Update Finance Management (Loans/Lending)
+    // 2. Update Finance Management (Loans/Lending/Debt)
     if (cat === "Debt & Finance" && person) {
         let amountChange = 0;
         let ledgerType = "";
 
-        // Standardize the subcategory string for comparison
         const subCheck = sub.replace(/\s/g, '').toLowerCase();
 
-        if (type === "Income" && subCheck.includes("Loan (Borrowing)")) {
-            amountChange = amt; ledgerType = "Borrowing";
-        } else if (type === "Expense" && subCheck === "lending") {
-            amountChange = amt; ledgerType = "Lending";
-        } else if (type === "Expense" && subCheck.includes("loanrepayment")) {
-            amountChange = -amt; ledgerType = "Borrowing";
-        } else if (type === "Income" && subCheck.includes("debtcollection")) {
-            amountChange = -amt; ledgerType = "Lending";
+        // Logic for Borrowing (Loans taken from others)
+        if (type === "Income" && subCheck.includes("loan(borrowing)")) {
+            amountChange = amt; 
+            ledgerType = "Borrowing";
+        } 
+        else if (type === "Expense" && subCheck.includes("loanrepayment")) {
+            amountChange = -amt; 
+            ledgerType = "Borrowing";
+        } 
+        // Logic for Lending (Money given to others)
+        else if (type === "Expense" && subCheck === "lending") {
+            amountChange = amt; 
+            ledgerType = "Lending";
+        } 
+        else if (type === "Income" && subCheck.includes("debtcollection")) {
+            amountChange = -amt; 
+            ledgerType = "Lending";
         }
 
         if (amountChange !== 0) {
-            // Check for existing record
+            // Check for existing active record for this person and type
             const { data: existing, error: fetchErr } = await supa.from('Finance_Management')
                 .select('*')
-                .eq('Person_Name', person) // Ensure this matches your DB column name exactly
+                .eq('Person_Name', person)
+                .eq('Type', ledgerType)
                 .eq('Status', 'Active')
                 .maybeSingle();
 
             if (existing) {
+                // Update existing balance
                 const newBal = Math.max(0, existing.Amount + amountChange);
                 const { error: updErr } = await supa.from('Finance_Management').update({
-    Amount: newBal,
-    Status: newBal <= 0 ? 'Settled' : 'Active',
-    Last_Update: date // Make sure this is "Last_Update" in the DB
-}).eq('id', existing.id);
-                
+                    Amount: newBal,
+                    Status: newBal <= 0 ? 'Settled' : 'Active',
+                    Last_Update: date
+                }).eq('id', existing.id);
+
                 if (updErr) console.error("Ledger Update Error:", updErr);
             } else if (amountChange > 0) {
-                // Only create new if we are adding debt/lending
+                // Create a new record if it's a new loan or new lending
                 const { error: insErr } = await supa.from('Finance_Management').insert([{
                     Person_Name: person,
                     Amount: amt,
                     Type: ledgerType,
                     Date: date,
-                    Status: 'Active'
+                    Category: 'Personal',
+                    Status: 'Active',
+                    Last_Update: date
                 }]);
-                
+
                 if (insErr) console.error("Ledger Insert Error:", insErr);
             }
         }
@@ -1307,7 +1330,7 @@ const vehicleTriggers = ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "
 
     msg("Entry Saved Successfully");
     clearForms();
-    await load();
+    if (typeof load === "function") await load();
 }
 
 async function saveConf() {
@@ -1761,7 +1784,7 @@ function renderLoanStatus() {
     const activeLoans = loans.filter(l => l.Status === 'Active');
     
     if (activeLoans.length === 0) {
-        container.innerHTML = "<small style='color:var(--sub)'>No active debts or lending.</small>";
+        container.innerHTML = "<small style='color:var(--sub)'>No active debts or Lending.</small>";
         return;
     }
 
