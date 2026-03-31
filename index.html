@@ -719,7 +719,7 @@ Income: {
         "Claims & Refunds": ["Broadband Claim", "Medical Refund", "Insurance Claim"],
         "Gifts": ["Personal", "Foreign Transaction"],
         "Other": ["Dividends", "Interest", "General"],
-        "Debt & Finance": ["Loan(Borrowing)", "Debt Collection"]
+        "Debt & Finance": ["Loan (Borrowing)", "Debt Collection"]
     },
     
     Expense: {
@@ -1263,7 +1263,7 @@ const vehicleTriggers = ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "
         // Standardize the subcategory string for comparison
         const subCheck = sub.replace(/\s/g, '').toLowerCase();
 
-        if (type === "Income" && subCheck.includes("loan(borrowing)")) {
+        if (type === "Income" && subCheck.includes("Loan (Borrowing)")) {
             amountChange = amt; ledgerType = "Borrowing";
         } else if (type === "Expense" && subCheck === "lending") {
             amountChange = amt; ledgerType = "Lending";
