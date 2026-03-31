@@ -1245,7 +1245,9 @@ async function saveTx() {
     const person = personSelect === "New" ? personNameInput : personSelect;
 
     if (!amt || amt <= 0) return msg("Please enter a valid amount");
-    if ((cat === "Debt & Finance") && !person) return msg("Please specify a person/lender");
+    
+    const financeTriggers = ["Loan Repayment", "Lending", "Loan (Borrowing)", "Debt Collection"];
+    if ((cat === "Debt & Finance") && financeTriggers.includes(sub) && !person) return msg("Please specify a person/lender");
 
     // Handle Vehicle Remarks for Transportation
     const vehicleTriggers = ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "Parking"];
