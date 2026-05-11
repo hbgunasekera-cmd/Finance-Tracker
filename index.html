@@ -1,1768 +1,2108 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-<title>Finance Tracker</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
-
-<style>
-:root[data-theme="light"] {
-    --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --sub: #64748b;
-    --border: #e2e8f0; --primary: #2563eb; --income: #10b981; --expense: #ef4444; --accent: #eff6ff;
-}
-:root[data-theme="dark"] {
-    --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --sub: #94a3b8;
-    --border: #334155; --primary: #3b82f6; --income: #34d399; --expense: #f87171; --accent: #1e293b;
-}
-
-* { box-sizing: border-box; transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-family: 'Inter', sans-serif; }
-body { background: var(--bg); color: var(--text); margin: 0; overflow-x: hidden; }
-
-.app-container { width: 100%; max-width: 500px; margin: 0 auto; min-height: 100vh; padding-bottom: 120px; }
-.page { display: none; padding: 20px; animation: slideUp 0.4s ease; }
-.page.active { display: block; }
-.card { background: var(--card); border-radius: 24px; padding: 20px; border: 1px solid var(--border); margin-bottom: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-
-.f-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
-.full { grid-column: span 2; }
-.label-sm { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--sub); display: block; margin-bottom: 6px; letter-spacing: 0.5px; }
-
-/* Inputs & Selects */
-input, select { 
-    width: 100% !important; height: 48px; padding: 10px 12px !important; 
-    border-radius: 14px; border: 1px solid var(--border); background: var(--bg); 
-    color: var(--text); font-size: 14px; outline: none; appearance: none; -webkit-appearance: none;
-}
-input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-.amt-input { font-size: 22px !important; font-weight: 800 !important; text-align: center; color: var(--primary) !important; }
-
-/* Enhanced Buttons */
-.btn-p { 
-    width: 100%; background: var(--primary); color: white; border: none; 
-    padding: 16px; border-radius: 18px; font-weight: 700; font-size: 16px;
-    cursor: pointer; margin-top: 15px; display: flex; align-items: center; 
-    justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-.btn-p:active { transform: scale(0.96); filter: brightness(0.9); }
-
-.btn-s { 
-    background: var(--accent); color: var(--primary); border: 1px solid var(--border);
-    padding: 12px; border-radius: 14px; font-size: 13px; font-weight: 700; 
-    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
-}
-
-.btn-del { 
-    background: rgba(239, 68, 68, 0.1); color: var(--expense); border: none; 
-    width: 28px; height: 28px; border-radius: 8px; font-size: 16px; 
-    display: flex; align-items: center; justify-content: center; cursor: pointer;
-}
-
-/* Nav & Hero */
-.nav-bar {
-    position: fixed;
-    bottom: 15px; /* Slightly lower for more screen space */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 95%; /* Increased width for 6 items */
-    max-width: 480px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 20px; /* Sharper, more modern radius */
-    display: flex;
-    padding: 6px 4px; /* Reduced padding */
-    z-index: 1000;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    backdrop-filter: blur(12px);
-}
-
-.nav-item {
-    flex: 1;
-    text-align: center;
-    color: var(--sub);
-    font-size: 9px; /* Slightly smaller text for 6 items */
-    font-weight: 700;
-    cursor: pointer;
-    padding: 6px 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-}
-
-.nav-item i {
-    font-size: 18px; /* Standardized icon size */
-    font-style: normal;
-    transition: transform 0.2s ease;
-}
-
-.nav-item.active {
-    color: var(--primary);
-}
-
-.nav-item.active i {
-    transform: translateY(-3px); /* Subtle lift effect for active tab */
-}
-
-.nav-item i { display: block; font-size: 20px; font-style: normal; margin-bottom: 2px; }
-
-.hero { background: var(--primary); color: white; border-radius: 28px; padding: 30px; text-align: center; margin-bottom: 20px; }
-.live-pill { font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; float: right; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); }
-
-#toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 25px; border-radius: 16px; z-index: 9999; display: none; font-size: 13px; font-weight: 600; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-
-/* Rings */
-/* Professional Rings Styling */
-.progress-box { 
-    position: relative; 
-    width: 110px; 
-    height: 110px; 
-    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2));
-}
-
-.ring-svg { 
-    width: 100%; 
-    height: 100%; 
-    transform: rotate(-90deg); 
-}
-
-.ring-bg { 
-    fill: none; 
-    stroke: rgba(255, 255, 255, 0.08); /* Darker, cleaner track */
-    stroke-width: 4; 
-}
-
-.ring-active { 
-    fill: none; 
-    stroke-width: 4; 
-    stroke-linecap: round; 
-    transition: stroke-dasharray 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy, professional feel */
-}
-
-/* Color Palette */
-.ring-active.overall { 
-    stroke: #fbbf24; /* Clean Gold */
-}
-
-.ring-active.monthly { 
-    stroke: #10b981; /* Premium Emerald */
-}
-
-/* Ring Labels Typography */
-.ring-label { 
-    position: absolute; 
-    top: 50%; left: 50%; 
-    transform: translate(-50%, -50%); 
-    text-align: center; 
-}
-
-.ring-label span { 
-    display: block; 
-    font-size: 18px; 
-    font-weight: 800; 
-    color: #ffffff; 
-    letter-spacing: -0.5px;
-}
-
-.ring-label small { 
-    display: block; 
-    font-size: 9px; 
-    font-weight: 700; 
-    text-transform: uppercase; 
-    color: rgba(255, 255, 255, 0.6); 
-    margin-top: -2px;
-}
-@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Pie Chart Styles */
-.pie-wrapper { 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    gap: 10px; 
-    min-width: 0; 
-}
-.pie-chart.big { width: 160px; height: 160px; border-width: 5px; }
-.pie-chart.small { width: 100px; height: 100px; border-width: 3px; }
-
-.pie-chart {
-    border-radius: 50%;
-    border: 4px solid var(--card);
-    box-shadow: 0 0 0 1px var(--border);
-    transition: background 0.5s ease;
-}
-.pie-legend { width: 100%; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
-#legendAll { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; } /* 2-column for the big chart */
-
-.legend-item { 
-    display: flex; 
-    align-items: center; 
-    gap: 6px; 
-    color: var(--sub); 
-    font-size: 9px; 
-    min-width: 0; 
-}
-
-.legend-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
-.legend-pct { font-weight: 700; color: var(--text); font-size: 8px; flex-shrink: 0; }
-.legend-color { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-
-.pie-sub-grid { 
-    display: grid; 
-    grid-template-columns: 1fr 1fr; 
-    gap: 15px; 
-    margin-top: 20px; 
-    padding-top: 15px; 
-    border-top: 1px dashed var(--border); 
-}
-
-.forecast-card {
-    background: var(--card) !important; /* Neutral background */
-    border: 2px solid var(--primary);
-    position: relative;
-    overflow: hidden;
-}
-
-.status-pill {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 8px;
-    font-weight: 800;
-    margin-top: 10px;
-    font-size: 24px;
-}
-
-/* High contrast variants */
-.pill-positive { background: #064e3b; color: #34d399; border: 1px solid #059669; }
-.pill-negative { background: #450a0a; color: #f87171; border: 1px solid #dc2626; }
-.pill-neutral { background: var(--accent); color: var(--sub); }
-
-/* 1. Remove text selection cursor from the entire background & buttons */
-html, body, div, section, nav, header, b, span, small {
-    cursor: default !important;
-    user-select: none !important;
-    -webkit-user-select: none;
-}
-
-/* 2. Restore and Fix cursors specifically for Input Fields */
-input, select, textarea, datalist {
-    cursor: text !important; /* Shows the I-beam only here */
-    user-select: text !important;
-    -webkit-user-select: text;
-    
-    /* This removes the BLINKING vertical line (caret) */
-    caret-color: transparent !important; 
-}
-
-/* 3. Ensure buttons and clickable items show a pointer finger */
-button, .nav-item, .list-item, [onclick] {
-    cursor: pointer !important;
-}
-
-#eAmt, #eRem, #eDate, #eLender, #fKey {
-    caret-color: transparent !important;
-    cursor: text !important;
-}
-
-@keyframes shake {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(5px); }
-    50% { transform: translateX(-5px); }
-    100% { transform: translateX(0); }
-}
-
-/* Report Summary & Forecast Pills */
-#reportSummary {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 20px;
-}
-
-.label-sm {
-    font-size: 10px;
-    text-transform: uppercase;
-    color: var(--sub);
-    letter-spacing: 0.5px;
-}
-
-.pill-positive { background: rgba(16, 185, 129, 0.1); color: var(--income); border: 1px solid var(--income); }
-.pill-negative { background: rgba(239, 68, 68, 0.1); color: var(--expense); border: 1px solid var(--expense); }
-.pill-neutral { background: var(--accent); color: var(--sub); border: 1px solid var(--border); }
-
-#monthlyForecastValue {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-    </style>
-</head>
-<body>
-
-<div id="loginOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px;">
-    <div class="card" style="width:100%; max-width:350px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-        <center>
-            <div style="font-size: 40px; margin-bottom: 10px;">🔐</div>
-            <h2 style="margin-bottom: 5px;">Finance Vault</h2>
-            <p style="color:var(--sub); font-size: 12px; margin-bottom: 25px;">Enter credentials to unlock</p>
-        </center>
-
-        <label class="label-sm">Username</label>
-        <input type="text" id="loginUser" placeholder="Enter username" style="margin-bottom: 15px; caret-color: var(--text) !important;">
-        
-        <label class="label-sm">Password</label>
-        <input type="password" id="loginPass" placeholder="Enter password" style="margin-bottom: 20px; caret-color: var(--text) !important;">
-        
-        <button id="loginBtn" class="btn-p" onclick="validateLogin()" style="width:100%; margin-top: 10px;">
-    Unlock Access
-</button>
-        
-        <div id="loginError" style="color:var(--expense); margin-top:15px; font-size:12px; text-align:center; display:none; background:rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px;"></div>
-    </div>
-</div>
-
-
-<div id="toast"></div>
-
-<div class="app-container">
-    <div style="padding: 25px 20px 10px 20px; display: flex; justify-content: space-between; align-items: center;">
-        <div><small style="color:var(--sub); font-weight:600;">Finance Tracker</small><h2 id="vTitle">Overview</h2></div>
-        <div onclick="toggleTheme()" style="cursor:pointer; font-size: 22px;">🌓</div>
-    </div>
-
-    <section id="dash" class="page active">
-        <div class="hero">
-    <div style="margin-bottom: 25px;">
-        <small style="opacity:0.7; letter-spacing: 2px; font-weight: 800; font-size: 10px;">TOTAL NET WORTH</small>
-        <h1 id="netVal" style="font-size: 38px; margin: 5px 0; font-weight: 900; letter-spacing: -1.5px;">0.00</h1>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 5px;">
-        <div class="progress-box">
-            <svg viewBox="0 0 36 36" class="ring-svg">
-                <circle class="ring-bg" cx="18" cy="18" r="15.9155" />
-                <circle id="overallRing" class="ring-active overall" cx="18" cy="18" r="15.9155" stroke-dasharray="0, 100" />
-            </svg>
-            <div class="ring-label">
-                <span id="overallPct" style="font-size:14px;">0%</span>
-                <small style="font-size:7px;">Liquidity</small>
-            </div>
-        </div>
-
-        <div class="progress-box">
-            <svg viewBox="0 0 36 36" class="ring-svg">
-                <circle class="ring-bg" cx="18" cy="18" r="15.9155" />
-                <circle id="assetRing" class="ring-active" cx="18" cy="18" r="15.9155" stroke-dasharray="0, 100" style="stroke: #a855f7;" />
-            </svg>
-            <div class="ring-label">
-                <span id="assetPct" style="font-size:14px;">0%</span>
-                <small style="font-size:7px;">Assets</small>
-            </div>
-        </div>
-
-        <div class="progress-box">
-            <svg viewBox="0 0 36 36" class="ring-svg">
-                <circle class="ring-bg" cx="18" cy="18" r="15.9155" />
-                <circle id="monthRing" class="ring-active monthly" cx="18" cy="18" r="15.9155" stroke-dasharray="0, 100" />
-            </svg>
-            <div class="ring-label">
-                <span id="monthPct" style="font-size:14px;">0%</span>
-                <small style="font-size:7px;">Available</small>
-            </div>
-        </div>
-    </div>
-</div>
-        <div class="f-grid">
-            <div class="card" style="margin:0; text-align:center;"><label class="label-sm">Main</label><div id="vMain" style="font-weight:800;">0</div></div>
-            <div class="card" style="margin:0; text-align:center;"><label class="label-sm">Saving</label><div id="vSave" style="font-weight:800;">0</div></div>
-            <div class="card" style="margin:0; text-align:center;"><label class="label-sm">CC Avail</label><div id="vCC" style="font-weight:800; color:var(--expense)">0</div></div>
-            <div class="card" style="margin:0; text-align:center;"><label class="label-sm">Crypto</label><div id="vCry" style="font-weight:800; color:var(--income)">0</div></div>
-        </div>
-        
-<div class="card" style="margin-top:16px;">
-    <label class="label-sm">Loan & Lending Status</label>
-    <div id="loanStatusList"></div>
-</div>
-        
-        
-        <div class="card" style="margin-top:16px;">
-            <label class="label-sm">Recent Transactions</label>
-            <div id="recentList"></div>
-        </div>
-    </section>
-
-    <section id="entry" class="page">
-    <div style="display: flex; background: var(--accent); border-radius: 14px; padding: 4px; margin-bottom: 15px;">
-        <button id="tabTx" onclick="switchEntryTab('tx')" style="flex:1; padding:10px; border:none; border-radius:10px; background:var(--primary); color:white; font-weight:700; cursor:pointer;">Record</button>
-        <button id="tabTf" onclick="switchEntryTab('tf')" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--sub); font-weight:700; cursor:pointer;">Transfer</button>
-    </div>
-
-    <div id="formTx" class="card">
-    <span id="eLive" class="live-pill">LKR 0</span>
-    <h3 style="margin-top:0">Transaction</h3>
-    <div class="f-grid">
-        <div class="full"><label class="label-sm">Date</label><input type="date" id="eDate"></div>
-        <div class="full"><label class="label-sm">Account</label><select id="eAcc" onchange="updateLive('eAcc','eLive')"><option>Main</option><option>Saving</option><option>Credit Card</option></select></div>
-        
-        <div class="full"><label class="label-sm">Type</label><select id="eType" onchange="loadCats()"><option>Expense</option><option>Income</option></select></div>
-        
-        <div><label class="label-sm">Category</label><select id="eCat" onchange="loadSubs(); toggleSpecialBoxes();"></select></div>
-        
-        <div><label class="label-sm">Subcategory</label><select id="eSub" onchange="toggleSpecialBoxes()"></select></div>
-        
-        <div class="full" id="vehBox" style="display:none"><label class="label-sm">Vehicle</label><select id="eVeh"></select></div>
-        
-        <div class="full" id="lenderBox" style="display:none">
-    <label class="label-sm">Lender / Borrower Name</label>
-    <input type="text" id="eLender" list="lenderSuggestions" placeholder="Select or type name..." class="input-field">
-    <datalist id="lenderSuggestions"></datalist>
-</div>
-
-        <div class="full"><label class="label-sm">Amount</label><input type="number" id="eAmt" class="amt-input" placeholder="0.00"></div>
-        <div class="full"><label class="label-sm">Remark</label><input type="text" id="eRem" placeholder="Optional notes..."></div>
-    </div>
-    <button class="btn-p" onclick="saveTx()">Confirm Entry</button>
-</div>
-
-    <div id="formTf" class="card" style="display:none;">
-    <span id="tLive" class="live-pill">LKR 0</span>
-    <h3 style="margin-top:0">Internal Transfer</h3>
-    <div class="f-grid">
-        <div class="full"><label class="label-sm">Date</label><input type="date" id="tDate"></div>
-        <div>
-            <label class="label-sm">From</label>
-            <select id="tFrom" onchange="updateLive('tFrom','tLive')">
-                <option>Main</option>
-                <option>Saving</option>
-                <option>Credit Card</option>
-                <option>Crypto</option>
-            </select>
-        </div>
-        <div>
-            <label class="label-sm">To</label>
-            <select id="tTo">
-                <option>Saving</option>
-                <option>Main</option>
-                <option>Credit Card</option>
-                <option>Crypto</option>
-            </select>
-        </div>
-        <div class="full"><label class="label-sm">Amount</label><input type="number" id="tAmt" class="amt-input" placeholder="0.00"></div>
-    </div>
-    <button class="btn-p" onclick="doTransfer()">Execute Transfer</button>
-</div>
-</section>
-
-
-<section id="assets" class="page">
-    <div class="card">
-        <h3 style="margin-top:0">Register New Asset</h3>
-        <div class="f-grid">
-        
-            <div class="full">
-                <label class="label-sm">Asset Name</label>
-                <input type="text" id="aName" placeholder="e.g. iPhone 12 Pro">
-            </div>
-            
-            <div class="full">
-    <label class="label-sm">Purchase Date</label>
-    <input type="date" id="aDate">
-</div>
-
-            <div>
-                <label class="label-sm">Category</label>
-                <select id="aCat">
-                    <option>Electronics</option>
-                    <option>Automobile</option>
-                    <option>Land</option>
-                    <option>Apartment</option>
-                    <option>Jewelry</option>
-                    <option>Furniture</option>
-                    <option>Tools</option>
-                    <option>Other</option>
-                </select>
-            </div>
-            <div>
-                <label class="label-sm">Est. Value (LKR)</label>
-                <input type="number" id="aVal" class="amt-input" placeholder="0.00">
-            </div>
-            <div class="full">
-                <label class="label-sm">Specs / Serial No.</label>
-                <input type="text" id="aSpec" placeholder="256GB, Graphite, etc.">
-            </div>
-        </div>
-        
-        <div style="display: flex; gap: 10px; margin-top: 15px;">
-            <button class="btn-p" style="flex: 2; margin-top:0;" onclick="addPhysicalAsset()"><span>➕</span> Register</button>
-            <button class="btn-s" style="flex: 1;" onclick="clearForms()">Clear</button>
-        </div>
-    </div>
-
-    <div class="card" style="background: var(--accent); border: 1px dashed var(--primary); text-align: center;">
-        <label class="label-sm">Total Physical Asset Value</label>
-        <h2 id="totalAssetVal" style="margin: 5px 0; color: var(--primary);">LKR 0</h2>
-    </div>
-
-    <div id="assetList" style="margin-top: 20px;"></div>
-</section>
-
-<section id="analysis" class="page">
-
-    <div class="hero" style="background: linear-gradient(135deg, var(--primary), #1e40af); padding: 20px;">
-        <label class="label-sm" style="color: rgba(255,255,255,0.8);">Financial Efficiency Score</label>
-        <h1 id="proScore" style="font-size: 48px; margin: 10px 0;">--</h1>
-        <div id="proStatus" style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Initializing Engine...</div>
-    </div>
-
-    <div class="card" style="margin-top: -20px;">
-        <div class="f-grid">
-    <select id="aYear" onchange="runProAnalysis()"></select>
-    <select id="aMonth" onchange="runProAnalysis()"></select>
-</div>
-    </div>
-
-    <div class="f-grid">
-        <div class="card">
-            <label class="label-sm">Savings Ratio</label>
-            <div id="anSaveRate" style="font-size: 20px; font-weight: 800;">0%</div>
-            <small id="saveBench" style="color:var(--sub);">vs 20% Goal</small>
-        </div>
-        
-        <div class="card">
-            <label class="label-sm">Daily Velocity</label>
-            <div id="anBurn" style="font-size: 20px; font-weight: 800; color:var(--expense);">0</div>
-            <small style="color:var(--sub);">LKR / Day</small>
-        </div>
-
-    </div>
-    
-    <div class="card">
-    <label class="label-sm" style="color: var(--primary);">Daily Available to Spend</label>
-    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
-            <span style="font-size: 12px; font-weight: 600;">1. Total (Main + Saving)</span>
-            <b id="anDailyTotal" style="font-size: 16px; color: var(--income);">0</b>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
-            <span style="font-size: 12px; color: var(--sub);">2. From Main Only</span>
-            <b id="anDailyMain" style="font-size: 14px;">0</b>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 12px; color: var(--sub);">3. From Saving Only</span>
-            <b id="anDailySave" style="font-size: 14px;">0</b>
-        </div>
-    </div>
-    <center><small id="daysLeftNote" style="display: block; margin-top: 10px; font-size: 10px; color: var(--sub); text-transform: uppercase;"></small></center>
-</div>
-
-<div class="card">
-        <label class="label-sm">Expense Concentration</label>
-        <div id="anChart" style="margin-top:15px;"></div>
-    </div>
-
-    <div class="card" style="padding: 20px 15px;">
-    <label class="label-sm" style="color: var(--primary); margin-bottom: 15px;">Subcategory Distribution</label>
-    
-    <div class="pie-wrapper">
-        <small class="label-sm" style="font-size: 10px; color: var(--text);">Overall History</small>
-        <div id="pieAll" class="pie-chart big"></div>
-        <div id="legendAll" class="pie-legend"></div>
-    </div>
-
-    <div class="pie-sub-grid">
-        <div class="pie-wrapper">
-            <small class="label-sm" style="font-size: 8px;">Selected Month</small>
-            <div id="pieSelected" class="pie-chart small"></div>
-            <div id="legendSelected" class="pie-legend"></div>
-        </div>
-        <div class="pie-wrapper">
-            <small class="label-sm" style="font-size: 8px;">Current Month</small>
-            <div id="pieMonth" class="pie-chart small"></div>
-            <div id="legendMonth" class="pie-legend"></div>
-        </div>
-    </div>
-</div>
-
-    
-    
-    <div class="card">
-        <h3 style="margin-top:0; font-size:14px; color:var(--primary);">PRO INSIGHTS</h3>
-        <div id="anInsights" style="font-size: 13px; line-height: 1.5;"></div>
-    </div>
-    
-</section>
-
-
-
-    <section id="stats" class="page">
-    
-        <div class="card forecast-card">
-    <label class="label-sm">Monthly Forecast</label>
-    <div id="monthlyForecastValue" class="status-pill pill-neutral">
-        Analyzing...
-    </div>
-    <div style="margin-top: 10px;">
-        <small style="color:var(--sub); font-size: 11px;">
-            Estimated month-end balance based on daily velocity
-        </small>
-    </div>
-</div>
-        
-        <div id="reportSummary" style="display:none; background:var(--accent); padding:15px; border-radius:15px; margin-bottom:15px; border:1px solid var(--border);">
-    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-        <span style="font-size:12px; color:var(--sub);">Total Income:</span>
-        <b id="repInc" style="color:var(--income);">0</b>
-    </div>
-    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-        <span style="font-size:12px; color:var(--sub);">Total Expense:</span>
-        <b id="repExp" style="color:var(--expense);">0</b>
-    </div>
-    <div style="display:flex; justify-content:space-between; padding-top:8px; border-top:1px solid var(--border);">
-        <span style="font-size:12px; font-weight:700;">Net Balance:</span>
-        <b id="repNet">0</b>
-    </div>
-</div>
-
-        <div class="card">
-            <label class="label-sm">Filters</label>
-            
-            <div class="f-grid" style="gap:8px;">
-            
-                <select id="fYear" onchange="runReport()"></select>
-                <select id="fMonth" onchange="runReport()"></select>
-    
-                <select id="fType" onchange="runReport()"><option value="">All Types</option><option>Expense</option><option>Income</option></select>
-                <select id="fAcc" onchange="runReport()"><option value="">All Accounts</option><option>Main</option><option>Saving</option><option>Credit Card</option><option>Crypto</option></select>
-                <input class="full" type="text" id="fKey" placeholder="Keyword Search..." oninput="runReport()">
-            </div>
-            <button onclick="exportCSV()" class="btn-s" style="margin-top:15px; width:100%;">Download CSV</button>
-            
-
-
-            <div id="reportList" style="margin-top:20px;"></div>
-        </div>
-    </section>
-
-    <section id="setup" class="page">
-    
-        <div class="card">
-            <h3>Baselines</h3>
-            <div class="f-grid">
-            
-<div><label class="label-sm">Main</label><input type="number" id="cMain" class="amt-input"></div>
-<div><label class="label-sm">Saving</label><input type="number" id="cSave" class="amt-input"></div>
-<div><label class="label-sm">CC Limit</label><input type="number" id="sCCL" class="amt-input"></div>
-<div><label class="label-sm">CC Available</label><input type="number" id="sCCS" class="amt-input"></div>
-<div><label class="label-sm">USDT Rate</label><input type="number" id="cRate" class="amt-input"></div>
-<div><label class="label-sm">Crypto (Qty)</label><input type="number" id="cCry" class="amt-input"></div>
-
-            </div>
-            <button class="btn-p" onclick="saveConf()">Sync Baselines</button>
-        </div>
-        
-        <div class="card">
-            <h3>Manage Vehicles</h3>
-            <div id="vehicleList"></div>
-            <div style="background:var(--bg); padding:15px; border-radius:15px; margin-top:10px;">
-                <input type="text" id="vReg" placeholder="Reg: BDD 0471">
-                <input type="text" id="vMake" placeholder="Model: Honda Hornet" style="margin-top:8px;">
-                <button class="btn-p" onclick="addVehicle()">Add Vehicle</button>
-            </div>
-        </div>
-        
-<div class="card" style="border: 1px solid var(--border);">
-    <label class="label-sm" style="color:var(--primary); margin-bottom: 15px; display: block;">
-        SECURITY SETTINGS
-    </label>
-    
-    <div style="display: flex; flex-direction: column; gap: 12px;">
-        
-        <input type="password" id="oldPass" placeholder="Current Password">
-        <input type="password" id="newPass" placeholder="New Password">
-        
-        <button class="btn-p" onclick="updateCredentials()" style="width:100%; margin-top: 5px;">
-            Update Password
-        </button>
-    </div>
-</div>
-
-    </section>
-
-<div class="nav-bar">
-    <div class="nav-item active" onclick="nav('dash', this)"><i>🏠</i>Dash</div>
-    <div class="nav-item" onclick="nav('entry', this)"><i>💸</i>Activity</div>
-    <div class="nav-item" onclick="nav('analysis', this)"><i>🧠</i>Engine</div>
-    <div class="nav-item" onclick="nav('assets', this)"><i>📦</i>Assets</div>
-    <div class="nav-item" onclick="nav('stats', this)"><i>📊</i>Stats</div>
-    <div class="nav-item" onclick="nav('setup', this)"><i>⚙️</i>Setup</div>
-</div>
-
-<script>
-
-
-const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', 'sb_publishable_cPy4XEg_f2eQEo0N-3UMyg_qX4nDtF8');
-
-let reportData = [];
-let txs = [], conf = {}, vehs = [], bal = {}, filteredTxs = [], physAssets = [], loans = [];
-
-const CATS = {
-Income: {
-        "Salary": ["Monthly Base", "Overtime", "Bonus"],
-        "Freelance": ["Web Development", "Consulting"],
-        "Claims & Refunds": ["Broadband Claim", "Medical Refund", "Insurance Claim"],
-        "Gifts": ["Personal", "Foreign Transaction"],
-        "Other": ["Dividends", "Interest", "General"],
-        "Debt & Finance": ["Loan (Borrowing)", "Debt Collection"]
-    },
-    
-    Expense: {
-        "Home Use": ["Monthly House Expense", "Mother", "Father", "Utilities (Water/Elec)", "Furniture/Hardware"],
-        "Foods & Beverages": ["Breakfast", "Lunch", "Dinner", "Snack", "Bakery Item", "Drinks", "Grocery"],
-        "Transportation": ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "Commuting (Bus/Train)", "Parking"],
-        "Telecommunication": ["Mobile Reload", "Internet/Data Bundle", "Cable TV"],
-        "Healthcare": ["Medicine", "Doctor Visit", "Supplement", "Hospital Bill"],
-        "Fashion & Grooming": ["Wearable", "Cosmetics", "Grooming/Salon", "Top Wear", "Bottom Wear", "Underwear", "Footwear"],
-        "Entertainment": ["Travel", "Camping", "Movies", "Ticket","Gifts"],
-        "Material & Chemicals": ["Tools", "Accessories", "Gadgets", "Chemicals"],
-        "Education": ["Courses", "Books", "Certifications"],
-        "Debt & Finance": ["Loan Repayment", "Lending", "Pawn Interest", "Bank Charges", "Credit Card"]
-    }
-    
-};
-
-
-window.validateLogin = async function() {
-    const userInp = document.getElementById('loginUser').value.trim();
-    const passInp = document.getElementById('loginPass').value.trim();
-    const btn = document.getElementById('loginBtn');
-
-    // Identify the bcrypt library correctly
-    const bcryptLib = window.bcrypt || (window.dcodeIO && window.dcodeIO.bcrypt);
-
-    if (!bcryptLib) {
-        showLoginError("Security library still loading... please wait 2 seconds.");
-        return;
-    }
-
-    if (!userInp || !passInp) {
-        showLoginError("Please fill all fields");
-        return;
-    }
-
-    btn.innerText = "Authenticating...";
-    btn.disabled = true;
-
-    try {
-        const { data, error } = await supa
-            .from('User_Credentials')
-            .select('password') 
-            .eq('username', userInp)
-            .single();
-
-        if (error || !data) {
-            showLoginError("Invalid Username");
-            resetLoginBtn(btn);
-            return;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Finance Tracker</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+
+    <style>
+        :root[data-theme="light"] {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --sub: #64748b;
+            --border: #e2e8f0;
+            --primary: #2563eb;
+            --income: #10b981;
+            --expense: #ef4444;
+            --accent: #eff6ff;
         }
 
-        // Use the identified library to compare
-        const isValid = bcryptLib.compareSync(passInp, data.password);
-
-        if (isValid) {
-            document.getElementById('loginOverlay').style.display = 'none';
-            load(); 
-        } else {
-            showLoginError("Invalid Password");
-            resetLoginBtn(btn);
-        }
-    } catch (err) {
-        console.error("Login System Error:", err);
-        resetLoginBtn(btn);
-        showLoginError("Connection Error");
-    }
-}
-
-function resetLoginBtn(btn) {
-    btn.innerText = "Unlock Access";
-    btn.disabled = false;
-    btn.style.opacity = "1";
-}
-
-function showLoginError(message) {
-    const err = document.getElementById('loginError');
-    err.innerText = message;
-    err.style.display = 'block';
-    // Shake effect
-    err.parentElement.style.animation = "shake 0.2s ease-in-out 0s 2";
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-    const overlay = document.getElementById('loginOverlay');
-    if(overlay) {
-        overlay.style.display = 'flex';
-    }
-    sessionStorage.removeItem('isVaultUnlocked');
-    // Initialize date inputs
-    const today = new Date().toISOString().split('T')[0];
-    ['eDate', 'tDate', 'aDate'].forEach(id => {
-        if(document.getElementById(id)) document.getElementById(id).value = today;
-    });
-});
-
-async function updateCredentials() {
-    const hasher = window.bcrypt || (window.dcodeIO && window.dcodeIO.bcrypt);
-    const oldPassEl = document.getElementById('oldPass');
-    const newPassEl = document.getElementById('newPass');
-
-    // Safety Check: Ensure UI elements exist
-    if (!oldPassEl || !newPassEl) return msg("UI Error: Input fields missing");
-
-    try {
-        // 1. Fetch the hash directly from the database
-        const { data, error } = await supa
-    .from('User_Credentials')
-    .select('password') 
-    .eq('id', 1)
-    .single();
-
-// 2. Audit: Check for 'password' instead of 'val'
-if (error || !data || !data.password) { 
-    console.error("Audit Error: System password record (hash) is missing from DB.");
-    return msg("Error: system password record not found");
-}
-
-const storedHash = data.password; // Changed from data.val to data.password
-        const userInput = oldPassEl.value;
-
-        // 3. Perform comparison (Both are now guaranteed to be strings)
-        const isMatch = hasher.compareSync(userInput, storedHash);
-
-        if (!isMatch) {
-            return msg("Current password incorrect");
+        :root[data-theme="dark"] {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --sub: #94a3b8;
+            --border: #334155;
+            --primary: #3b82f6;
+            --income: #34d399;
+            --expense: #f87171;
+            --accent: #1e293b;
         }
 
-        // 4. Hash and Update the new password
-        const salt = hasher.genSaltSync(10);
-        const newHash = hasher.hashSync(newPassEl.value, salt);
+        * {
+            box-sizing: border-box;
+            transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Inter', sans-serif;
+        }
 
-        const { updateError } = await supa
-            .from('User_Credentials')
-            .update({ password: newHash })
-            .eq('id', 1);
+        body {
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            overflow-x: hidden;
+        }
 
-        if (updateError) throw updateError;
+        .app-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            min-height: 100vh;
+            padding-bottom: 120px;
+        }
 
-        msg("Credentials updated successfully");
-        oldPassEl.value = '';
-        newPassEl.value = '';
-        
-    } catch (e) {
-        console.error("Security Engine Error:", e);
-        msg("Update failed: Illegal arguments prevented");
-    }
-}
+        .page {
+            display: none;
+            padding: 20px;
+            animation: slideUp 0.4s ease;
+        }
 
+        .page.active {
+            display: block;
+        }
 
+        .card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            margin-bottom: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
 
+        .f-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+        }
 
+        .full {
+            grid-column: span 2;
+        }
 
+        .label-sm {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--sub);
+            display: block;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
 
+        /* Inputs & Selects */
+        input,
+        select {
+            width: 100% !important;
+            height: 48px;
+            padding: 10px 12px !important;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+        }
 
+        input:focus,
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
 
+        .amt-input {
+            font-size: 22px !important;
+            font-weight: 800 !important;
+            text-align: center;
+            color: var(--primary) !important;
+        }
 
+        /* Enhanced Buttons */
+        .btn-p {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 18px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
 
+        .btn-p:active {
+            transform: scale(0.96);
+            filter: brightness(0.9);
+        }
 
+        .btn-s {
+            background: var(--accent);
+            color: var(--primary);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
 
-// --- CORE ENGINE & LOAD ---
+        .btn-del {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--expense);
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
 
-async function load() {
-    try {
-        // 1. Parallel Fetch
-        const [resConf, resTxs, resVehs, resAssets, resLoans] = await Promise.all([
-            supa.from('Config').select('*').single(),
-            supa.from('Transaction_Records').select('*').order('Date', { ascending: false }),
-            supa.from('Vehicles').select('*'),
-            supa.from('Physical_Assets').select('*'),
-            supa.from('Finance_Management').select('*').eq('Status', 'Active')
-        ]);
+        /* Nav & Hero */
+        .nav-bar {
+            position: fixed;
+            bottom: 15px;
+            /* Slightly lower for more screen space */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            /* Increased width for 6 items */
+            max-width: 480px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            /* Sharper, more modern radius */
+            display: flex;
+            padding: 6px 4px;
+            /* Reduced padding */
+            z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(12px);
+        }
 
-        // 2. Global Sync
-        conf = resConf.data || {};
-        txs = resTxs.data || [];
-        vehs = resVehs.data || [];
-        physAssets = resAssets.data || [];
-        loans = resLoans.data || [];
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            color: var(--sub);
+            font-size: 9px;
+            /* Slightly smaller text for 6 items */
+            font-weight: 700;
+            cursor: pointer;
+            padding: 6px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
 
-        // 3. UI and Logic Trigger
-        updateDateFilters(); 
-        
-        // This ensures variables are ready before render functions fire
-        calculate(); 
+        .nav-item i {
+            font-size: 18px;
+            /* Standardized icon size */
+            font-style: normal;
+            transition: transform 0.2s ease;
+        }
 
-        renderDashboard();
-        renderVehicles();
-        renderPhysicalAssets();
-        renderLoanStatus();
-        updateLenderSuggestions();
-        
-        // Refresh active tab views
-        const analysisActive = document.getElementById('analysis')?.classList.contains('active');
-        const statsActive = document.getElementById('stats')?.classList.contains('active');
-        
-        if(analysisActive) runProAnalysis();
-        if(statsActive) runReport();
+        .nav-item.active {
+            color: var(--primary);
+        }
 
-    } catch (err) { 
-        console.error("Critical Load Error:", err); 
-        msg("Sync Failed. Check Console.");
-    }
-}
+        .nav-item.active i {
+            transform: translateY(-3px);
+            /* Subtle lift effect for active tab */
+        }
 
-function calculate() {
-    // 1. Establish Initial Baselines from Config
-    bal = { 
-        Main: parseFloat(conf.Main_Balance || 0), 
-        Saving: parseFloat(conf.Saving_Balance || 0), 
-        CC: parseFloat(conf.CCS || 0), 
-        Crypto: (parseFloat(conf.Crypto_Balance || 0) * parseFloat(conf.Rate || 0))
-    };
+        .nav-item i {
+            display: block;
+            font-size: 20px;
+            font-style: normal;
+            margin-bottom: 2px;
+        }
 
-    const curMonth = new Date().toISOString().slice(0, 7);
-    let mainStartBalance = bal.Main; 
-    let mainMonthlyExpense = 0;
+        .hero {
+            background: var(--primary);
+            color: white;
+            border-radius: 28px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
 
-    // 2. Adjust for ALL Transactions (Ledger Logic)
-    txs.forEach(t => {
-        const a = parseFloat(t.Amount || 0);
-        
-        // FIX: Removed "if (t.Account === 'Crypto') return" to allow ledger updates
-        const accMap = { 
-            "Main": "Main", 
-            "Saving": "Saving", 
-            "Credit Card": "CC", 
-            "Crypto": "Crypto" // Added Crypto to map
-        };
-        const key = accMap[t.Account];
+        .live-pill {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 5px 12px;
+            border-radius: 20px;
+            float: right;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
 
-        if (key && bal[key] !== undefined) {
-            t.Type === 'Income' ? bal[key] += a : bal[key] -= a;
-            
-            // Monthly Main Account Tracking
-            if (t.Account === "Main") {
-                if (t.Date.startsWith(curMonth)) {
-                    if (t.Type === "Expense") mainMonthlyExpense += a;
-                } else {
-                    // Pre-current month transactions define the "Starting Pool"
-                    t.Type === 'Income' ? mainStartBalance += a : mainStartBalance -= a;
-                }
+        #toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 16px;
+            z-index: 9999;
+            display: none;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Rings */
+        /* Professional Rings Styling */
+        .progress-box {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
+        }
+
+        .ring-svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .ring-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.08);
+            /* Darker, cleaner track */
+            stroke-width: 4;
+        }
+
+        .ring-active {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+            transition: stroke-dasharray 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            /* Bouncy, professional feel */
+        }
+
+        /* Color Palette */
+        .ring-active.overall {
+            stroke: #fbbf24;
+            /* Clean Gold */
+        }
+
+        .ring-active.monthly {
+            stroke: #10b981;
+            /* Premium Emerald */
+        }
+
+        /* Ring Labels Typography */
+        .ring-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .ring-label span {
+            display: block;
+            font-size: 18px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+
+        .ring-label small {
+            display: block;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: -2px;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
-    });
 
-    // 3. Loan & Lending Module
-    let totalLent = 0;    // Money owed to you (Asset)
-    let totalBorrowed = 0; // Money you owe (Liability)
-    loans.forEach(l => {
-        const val = parseFloat(l.Amount || 0);
-        l.Type === 'Lending' ? totalLent += val : totalBorrowed += val;
-    });
+        /* Pie Chart Styles */
+        .pie-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
 
-    // 4. Net Worth Math
-    const ccLimit = parseFloat(conf.CCL || 0);
-    const ccDebt = Math.max(0, ccLimit - bal.CC); 
-    
-    // Total Cash available right now (Includes Crypto ledger updates)
-    const totalCash = bal.Main + bal.Saving + bal.Crypto;
-    // Total Debt (CC + Loans)
-    const totalLiabilities = ccDebt + totalBorrowed;
+        .pie-chart.big {
+            width: 160px;
+            height: 160px;
+            border-width: 5px;
+        }
 
-    // Net Worth Calculation
-    const liquid = (totalCash + totalLent) - totalLiabilities; 
-    const physical = physAssets.reduce((s, a) => s + getDepreciatedValue(a), 0);
-    const total = liquid + physical; 
+        .pie-chart.small {
+            width: 100px;
+            height: 100px;
+            border-width: 3px;
+        }
 
-    // 5. Update UI Numbers
-    const setVal = (id, val) => { 
-        if(document.getElementById(id)) document.getElementById(id).innerText = Math.round(val).toLocaleString(); 
-    };
-    setVal('vMain', bal.Main); 
-    setVal('vSave', bal.Saving);
-    setVal('vCC', bal.CC);
-    setVal('vCry', bal.Crypto);
-    setVal('netVal', total);
+        .pie-chart {
+            border-radius: 50%;
+            border: 4px solid var(--card);
+            box-shadow: 0 0 0 1px var(--border);
+            transition: background 0.5s ease;
+        }
 
-    // 6. Update Dashboard Rings
-    
-    // Ring 1: LIQUIDITY (Gold) - Cash vs Debt
-    const liquidityPct = ((totalCash - totalLiabilities) / Math.max(totalCash, 1)) * 100;
-    updateRing('overallRing', 'overallPct', liquidityPct);
+        .pie-legend {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
 
-    // Ring 2: ASSETS (Purple) - Physical Ratio
-    // FIX: Using Math.abs(total) or floor to ensure negative net worth doesn't break SVG
-    const assetBase = Math.max(Math.abs(total), 1);
-    updateRing('assetRing', 'assetPct', (physical / assetBase) * 100);
+        #legendAll {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 12px;
+        }
 
-    // Ring 3: AVAILABLE (Green) - Monthly Main Budget
-    const monthRemaining = mainStartBalance - mainMonthlyExpense;
-    const remainingPct = (monthRemaining / Math.max(mainStartBalance, 1)) * 100;
-    updateRing('monthRing', 'monthPct', remainingPct);
-}
+        /* 2-column for the big chart */
 
-function updateRing(id, textId, pct) {
-    const ring = document.getElementById(id);
-    const text = document.getElementById(textId);
-    
-    // Allow pct to go above 100 or below 0 for calculation, but clamp for visual
-    const safePct = Math.max(0, Math.min(100, isNaN(pct) ? 0 : pct));
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--sub);
+            font-size: 9px;
+            min-width: 0;
+        }
 
-    if (ring) {
-        const circumference = 100; // Assumes pathLength="100" in SVG
-        const offset = circumference - (safePct / 100) * circumference;
-        ring.style.strokeDasharray = circumference;
-        ring.style.strokeDashoffset = offset;
-    }
-    
-    if (text) text.innerText = Math.round(pct) + '%';
-}
+        .legend-item span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
 
-function renderSubPie(txList, chartId, legendId) {
-    const expenses = txList.filter(t => t.Type === 'Expense');
-    const total = expenses.reduce((s, t) => s + (+t.Amount), 0);
-    const subCats = {};
-    
-    // Aggregate by Subcategory
-    expenses.forEach(t => {
-        subCats[t.Subcategory] = (subCats[t.Subcategory] || 0) + (+t.Amount);
-    });
+        .legend-pct {
+            font-weight: 700;
+            color: var(--text);
+            font-size: 8px;
+            flex-shrink: 0;
+        }
 
-    // Sort and take top 6, group others
-    const sorted = Object.entries(subCats).sort((a, b) => b[1] - a[1]);
-    const top = sorted.slice(0, 5);
-    if (sorted.length > 5) {
-        const otherSum = sorted.slice(5).reduce((s, x) => s + x[1], 0);
-        top.push(["Others", otherSum]);
-    }
+        .legend-color {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
 
-    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
-    let gradient = [];
-    let currentPct = 0;
-    let legendHtml = '';
+        .pie-sub-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--border);
+        }
 
-    top.forEach((item, i) => {
-        const pct = (item[1] / total) * 100;
-        const color = colors[i];
-        gradient.push(`${color} ${currentPct}% ${currentPct + pct}%`);
-        currentPct += pct;
-        
-        legendHtml += `
+        .forecast-card {
+            background: var(--card) !important;
+            /* Neutral background */
+            border: 2px solid var(--primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-weight: 800;
+            margin-top: 10px;
+            font-size: 24px;
+        }
+
+        /* High contrast variants */
+        .pill-positive {
+            background: #064e3b;
+            color: #34d399;
+            border: 1px solid #059669;
+        }
+
+        .pill-negative {
+            background: #450a0a;
+            color: #f87171;
+            border: 1px solid #dc2626;
+        }
+
+        .pill-neutral {
+            background: var(--accent);
+            color: var(--sub);
+        }
+
+        /* 1. Remove text selection cursor from the entire background & buttons */
+        html,
+        body,
+        div,
+        section,
+        nav,
+        header,
+        b,
+        span,
+        small {
+            cursor: default !important;
+            user-select: none !important;
+            -webkit-user-select: none;
+        }
+
+        /* 2. Restore and Fix cursors specifically for Input Fields */
+        input,
+        select,
+        textarea,
+        datalist {
+            cursor: text !important;
+            /* Shows the I-beam only here */
+            user-select: text !important;
+            -webkit-user-select: text;
+
+            /* This removes the BLINKING vertical line (caret) */
+            caret-color: transparent !important;
+        }
+
+        /* 3. Ensure buttons and clickable items show a pointer finger */
+        button,
+        .nav-item,
+        .list-item,
+        [onclick] {
+            cursor: pointer !important;
+        }
+
+        #eAmt,
+        #eRem,
+        #eDate,
+        #eLender,
+        #fKey {
+            caret-color: transparent !important;
+            cursor: text !important;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(5px);
+            }
+
+            50% {
+                transform: translateX(-5px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        /* Report Summary & Forecast Pills */
+        #reportSummary {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .label-sm {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--sub);
+            letter-spacing: 0.5px;
+        }
+
+        .pill-positive {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--income);
+            border: 1px solid var(--income);
+        }
+
+        .pill-negative {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--expense);
+            border: 1px solid var(--expense);
+        }
+
+        .pill-neutral {
+            background: var(--accent);
+            color: var(--sub);
+            border: 1px solid var(--border);
+        }
+
+        #monthlyForecastValue {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loginOverlay"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px;">
+        <div class="card"
+            style="width:100%; max-width:350px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <center>
+                <div style="font-size: 40px; margin-bottom: 10px;">🔐</div>
+                <h2 style="margin-bottom: 5px;">Finance Vault</h2>
+                <p style="color:var(--sub); font-size: 12px; margin-bottom: 25px;">Enter credentials to unlock</p>
+            </center>
+
+            <label class="label-sm">Username</label>
+            <input type="text" id="loginUser" placeholder="Enter username"
+                style="margin-bottom: 15px; caret-color: var(--text) !important;">
+
+            <label class="label-sm">Password</label>
+            <input type="password" id="loginPass" placeholder="Enter password"
+                style="margin-bottom: 20px; caret-color: var(--text) !important;">
+
+            <button id="loginBtn" class="btn-p" onclick="validateLogin()" style="width:100%; margin-top: 10px;">
+                Unlock Access
+            </button>
+
+            <div id="loginError"
+                style="color:var(--expense); margin-top:15px; font-size:12px; text-align:center; display:none; background:rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px;">
+            </div>
+        </div>
+    </div>
+
+
+    <div id="toast"></div>
+
+    <div class="app-container">
+        <div style="padding: 25px 20px 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div><small style="color:var(--sub); font-weight:600;">Finance Tracker</small>
+                <h2 id="vTitle">Overview</h2>
+            </div>
+            <div onclick="toggleTheme()" style="cursor:pointer; font-size: 22px;">🌓</div>
+        </div>
+
+        <section id="dash" class="page active">
+            <div class="hero">
+                <div style="margin-bottom: 25px;">
+                    <small style="opacity:0.7; letter-spacing: 2px; font-weight: 800; font-size: 10px;">TOTAL NET
+                        WORTH</small>
+                    <h1 id="netVal" style="font-size: 38px; margin: 5px 0; font-weight: 900; letter-spacing: -1.5px;">
+                        0.00</h1>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 5px;">
+                    <div class="progress-box">
+                        <svg viewBox="0 0 36 36" class="ring-svg">
+                            <circle class="ring-bg" cx="18" cy="18" r="15.9155" />
+                            <circle id="overallRing" class="ring-active overall" cx="18" cy="18" r="15.9155"
+                                stroke-dasharray="0, 100" />
+                        </svg>
+                        <div class="ring-label">
+                            <span id="overallPct" style="font-size:14px;">0%</span>
+                            <small style="font-size:7px;">Liquidity</small>
+                        </div>
+                    </div>
+
+                    <div class="progress-box">
+                        <svg viewBox="0 0 36 36" class="ring-svg">
+                            <circle class="ring-bg" cx="18" cy="18" r="15.9155" />
+                            <circle id="assetRing" class="ring-active" cx="18" cy="18" r="15.9155"
+                                stroke-dasharray="0, 100" style="stroke: #a855f7;" />
+                        </svg>
+                        <div class="ring-label">
+                            <span id="assetPct" style="font-size:14px;">0%</span>
+                            <small style="font-size:7px;">Assets</small>
+                        </div>
+                    </div>
+
+                    <div class="progress-box">
+                        <svg viewBox="0 0 36 36" class="ring-svg">
+                            <circle class="ring-bg" cx="18" cy="18" r="15.9155" />
+                            <circle id="monthRing" class="ring-active monthly" cx="18" cy="18" r="15.9155"
+                                stroke-dasharray="0, 100" />
+                        </svg>
+                        <div class="ring-label">
+                            <span id="monthPct" style="font-size:14px;">0%</span>
+                            <small style="font-size:7px;">Available</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="f-grid">
+                <div class="card" style="margin:0; text-align:center;"><label class="label-sm">Main</label>
+                    <div id="vMain" style="font-weight:800;">0</div>
+                </div>
+                <div class="card" style="margin:0; text-align:center;"><label class="label-sm">Saving</label>
+                    <div id="vSave" style="font-weight:800;">0</div>
+                </div>
+                <div class="card" style="margin:0; text-align:center;"><label class="label-sm">CC Avail</label>
+                    <div id="vCC" style="font-weight:800; color:var(--expense)">0</div>
+                </div>
+                <div class="card" style="margin:0; text-align:center;"><label class="label-sm">Crypto</label>
+                    <div id="vCry" style="font-weight:800; color:var(--income)">0</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:16px;">
+                <label class="label-sm">Loan & Lending Status</label>
+                <div id="loanStatusList"></div>
+            </div>
+
+
+            <div class="card" style="margin-top:16px;">
+                <label class="label-sm">Recent Transactions</label>
+                <div id="recentList"></div>
+            </div>
+        </section>
+
+        <section id="entry" class="page">
+            <div
+                style="display: flex; background: var(--accent); border-radius: 14px; padding: 4px; margin-bottom: 15px;">
+                <button id="tabTx" onclick="switchEntryTab('tx')"
+                    style="flex:1; padding:10px; border:none; border-radius:10px; background:var(--primary); color:white; font-weight:700; cursor:pointer;">Record</button>
+                <button id="tabTf" onclick="switchEntryTab('tf')"
+                    style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--sub); font-weight:700; cursor:pointer;">Transfer</button>
+            </div>
+
+            <div id="formTx" class="card">
+                <span id="eLive" class="live-pill">LKR 0</span>
+                <h3 style="margin-top:0">Transaction</h3>
+                <div class="f-grid">
+                    <div class="full"><label class="label-sm">Date</label><input type="date" id="eDate"></div>
+                    <div class="full"><label class="label-sm">Account</label><select id="eAcc"
+                            onchange="updateLive('eAcc','eLive')">
+                            <option>Main</option>
+                            <option>Saving</option>
+                            <option>Credit Card</option>
+                        </select></div>
+
+                    <div class="full"><label class="label-sm">Type</label><select id="eType" onchange="loadCats()">
+                            <option>Expense</option>
+                            <option>Income</option>
+                        </select></div>
+
+                    <div><label class="label-sm">Category</label><select id="eCat"
+                            onchange="loadSubs(); toggleSpecialBoxes();"></select></div>
+
+                    <div><label class="label-sm">Subcategory</label><select id="eSub"
+                            onchange="toggleSpecialBoxes()"></select></div>
+
+                    <div class="full" id="vehBox" style="display:none"><label class="label-sm">Vehicle</label><select
+                            id="eVeh"></select></div>
+
+                    <div class="full" id="lenderBox" style="display:none">
+                        <label class="label-sm">Lender / Borrower Name</label>
+                        <input type="text" id="eLender" list="lenderSuggestions" placeholder="Select or type name..."
+                            class="input-field">
+                        <datalist id="lenderSuggestions"></datalist>
+                    </div>
+
+                    <div class="full"><label class="label-sm">Amount</label><input type="number" id="eAmt"
+                            class="amt-input" placeholder="0.00"></div>
+                    <div class="full"><label class="label-sm">Remark</label><input type="text" id="eRem"
+                            placeholder="Optional notes..."></div>
+                </div>
+                <button class="btn-p" onclick="saveTx()">Confirm Entry</button>
+            </div>
+
+            <div id="formTf" class="card" style="display:none;">
+                <span id="tLive" class="live-pill">LKR 0</span>
+                <h3 style="margin-top:0">Internal Transfer</h3>
+                <div class="f-grid">
+                    <div class="full"><label class="label-sm">Date</label><input type="date" id="tDate"></div>
+                    <div>
+                        <label class="label-sm">From</label>
+                        <select id="tFrom" onchange="updateLive('tFrom','tLive')">
+                            <option>Main</option>
+                            <option>Saving</option>
+                            <option>Credit Card</option>
+                            <option>Crypto</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-sm">To</label>
+                        <select id="tTo">
+                            <option>Saving</option>
+                            <option>Main</option>
+                            <option>Credit Card</option>
+                            <option>Crypto</option>
+                        </select>
+                    </div>
+                    <div class="full"><label class="label-sm">Amount</label><input type="number" id="tAmt"
+                            class="amt-input" placeholder="0.00"></div>
+                </div>
+                <button class="btn-p" onclick="doTransfer()">Execute Transfer</button>
+            </div>
+        </section>
+
+
+        <section id="assets" class="page">
+            <div class="card">
+                <h3 style="margin-top:0">Register New Asset</h3>
+                <div class="f-grid">
+
+                    <div class="full">
+                        <label class="label-sm">Asset Name</label>
+                        <input type="text" id="aName" placeholder="e.g. iPhone 12 Pro">
+                    </div>
+
+                    <div class="full">
+                        <label class="label-sm">Purchase Date</label>
+                        <input type="date" id="aDate">
+                    </div>
+
+                    <div>
+                        <label class="label-sm">Category</label>
+                        <select id="aCat">
+                            <option>Electronics</option>
+                            <option>Automobile</option>
+                            <option>Land</option>
+                            <option>Apartment</option>
+                            <option>Jewelry</option>
+                            <option>Furniture</option>
+                            <option>Tools</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-sm">Est. Value (LKR)</label>
+                        <input type="number" id="aVal" class="amt-input" placeholder="0.00">
+                    </div>
+                    <div class="full">
+                        <label class="label-sm">Specs / Serial No.</label>
+                        <input type="text" id="aSpec" placeholder="256GB, Graphite, etc.">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn-p" style="flex: 2; margin-top:0;" onclick="addPhysicalAsset()"><span>➕</span>
+                        Register</button>
+                    <button class="btn-s" style="flex: 1;" onclick="clearForms()">Clear</button>
+                </div>
+            </div>
+
+            <div class="card" style="background: var(--accent); border: 1px dashed var(--primary); text-align: center;">
+                <label class="label-sm">Total Physical Asset Value</label>
+                <h2 id="totalAssetVal" style="margin: 5px 0; color: var(--primary);">LKR 0</h2>
+            </div>
+
+            <div id="assetList" style="margin-top: 20px;"></div>
+        </section>
+
+        <section id="analysis" class="page">
+
+            <div class="hero" style="background: linear-gradient(135deg, var(--primary), #1e40af); padding: 20px;">
+                <label class="label-sm" style="color: rgba(255,255,255,0.8);">Financial Efficiency Score</label>
+                <h1 id="proScore" style="font-size: 48px; margin: 10px 0;">--</h1>
+                <div id="proStatus"
+                    style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                    Initializing Engine...</div>
+            </div>
+
+            <div class="card" style="margin-top: -20px;">
+                <div class="f-grid">
+                    <select id="aYear" onchange="runProAnalysis()"></select>
+                    <select id="aMonth" onchange="runProAnalysis()"></select>
+                </div>
+            </div>
+
+            <div class="f-grid">
+                <div class="card">
+                    <label class="label-sm">Savings Ratio</label>
+                    <div id="anSaveRate" style="font-size: 20px; font-weight: 800;">0%</div>
+                    <small id="saveBench" style="color:var(--sub);">vs 20% Goal</small>
+                </div>
+
+                <div class="card">
+                    <label class="label-sm">Daily Velocity</label>
+                    <div id="anBurn" style="font-size: 20px; font-weight: 800; color:var(--expense);">0</div>
+                    <small style="color:var(--sub);">LKR / Day</small>
+                </div>
+
+            </div>
+
+            <div class="card">
+                <label class="label-sm" style="color: var(--primary);">Daily Available to Spend</label>
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
+                        <span style="font-size: 12px; font-weight: 600;">1. Total (Main + Saving)</span>
+                        <b id="anDailyTotal" style="font-size: 16px; color: var(--income);">0</b>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
+                        <span style="font-size: 12px; color: var(--sub);">2. From Main Only</span>
+                        <b id="anDailyMain" style="font-size: 14px;">0</b>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; color: var(--sub);">3. From Saving Only</span>
+                        <b id="anDailySave" style="font-size: 14px;">0</b>
+                    </div>
+                </div>
+                <center><small id="daysLeftNote"
+                        style="display: block; margin-top: 10px; font-size: 10px; color: var(--sub); text-transform: uppercase;"></small>
+                </center>
+            </div>
+
+            <div class="card">
+                <label class="label-sm">Expense Concentration</label>
+                <div id="anChart" style="margin-top:15px;"></div>
+            </div>
+
+            <div class="card" style="padding: 20px 15px;">
+                <label class="label-sm" style="color: var(--primary); margin-bottom: 15px;">Subcategory
+                    Distribution</label>
+
+                <div class="pie-wrapper">
+                    <small class="label-sm" style="font-size: 10px; color: var(--text);">Overall History</small>
+                    <div id="pieAll" class="pie-chart big"></div>
+                    <div id="legendAll" class="pie-legend"></div>
+                </div>
+
+                <div class="pie-sub-grid">
+                    <div class="pie-wrapper">
+                        <small class="label-sm" style="font-size: 8px;">Selected Month</small>
+                        <div id="pieSelected" class="pie-chart small"></div>
+                        <div id="legendSelected" class="pie-legend"></div>
+                    </div>
+                    <div class="pie-wrapper">
+                        <small class="label-sm" style="font-size: 8px;">Current Month</small>
+                        <div id="pieMonth" class="pie-chart small"></div>
+                        <div id="legendMonth" class="pie-legend"></div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <div class="card">
+                <h3 style="margin-top:0; font-size:14px; color:var(--primary);">PRO INSIGHTS</h3>
+                <div id="anInsights" style="font-size: 13px; line-height: 1.5;"></div>
+            </div>
+
+        </section>
+
+
+
+        <section id="stats" class="page">
+
+            <div class="card forecast-card">
+                <label class="label-sm">Monthly Forecast</label>
+                <div id="monthlyForecastValue" class="status-pill pill-neutral">
+                    Analyzing...
+                </div>
+                <div style="margin-top: 10px;">
+                    <small style="color:var(--sub); font-size: 11px;">
+                        Estimated month-end balance based on daily velocity
+                    </small>
+                </div>
+            </div>
+
+            <div id="reportSummary"
+                style="display:none; background:var(--accent); padding:15px; border-radius:15px; margin-bottom:15px; border:1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="font-size:12px; color:var(--sub);">Total Income:</span>
+                    <b id="repInc" style="color:var(--income);">0</b>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="font-size:12px; color:var(--sub);">Total Expense:</span>
+                    <b id="repExp" style="color:var(--expense);">0</b>
+                </div>
+                <div
+                    style="display:flex; justify-content:space-between; padding-top:8px; border-top:1px solid var(--border);">
+                    <span style="font-size:12px; font-weight:700;">Net Balance:</span>
+                    <b id="repNet">0</b>
+                </div>
+            </div>
+
+            <div class="card">
+                <label class="label-sm">Filters</label>
+
+                <div class="f-grid" style="gap:8px;">
+
+                    <select id="fYear" onchange="runReport()"></select>
+                    <select id="fMonth" onchange="runReport()"></select>
+
+                    <select id="fType" onchange="runReport()">
+                        <option value="">All Types</option>
+                        <option>Expense</option>
+                        <option>Income</option>
+                    </select>
+                    <select id="fAcc" onchange="runReport()">
+                        <option value="">All Accounts</option>
+                        <option>Main</option>
+                        <option>Saving</option>
+                        <option>Credit Card</option>
+                        <option>Crypto</option>
+                    </select>
+                    <input class="full" type="text" id="fKey" placeholder="Keyword Search..." oninput="runReport()">
+                </div>
+                <button onclick="exportCSV()" class="btn-s" style="margin-top:15px; width:100%;">Download CSV</button>
+
+
+
+                <div id="reportList" style="margin-top:20px;"></div>
+            </div>
+        </section>
+
+        <section id="setup" class="page">
+
+            <div class="card">
+                <h3>Baselines</h3>
+                <div class="f-grid">
+
+                    <div><label class="label-sm">Main</label><input type="number" id="cMain" class="amt-input"></div>
+                    <div><label class="label-sm">Saving</label><input type="number" id="cSave" class="amt-input"></div>
+                    <div><label class="label-sm">CC Limit</label><input type="number" id="sCCL" class="amt-input"></div>
+                    <div><label class="label-sm">CC Available</label><input type="number" id="sCCS" class="amt-input">
+                    </div>
+                    <div><label class="label-sm">USDT Rate</label><input type="number" id="cRate" class="amt-input">
+                    </div>
+                    <div><label class="label-sm">Crypto (Qty)</label><input type="number" id="cCry" class="amt-input">
+                    </div>
+
+                </div>
+                <button class="btn-p" onclick="saveConf()">Sync Baselines</button>
+            </div>
+
+            <div class="card">
+                <h3>Manage Vehicles</h3>
+                <div id="vehicleList"></div>
+                <div style="background:var(--bg); padding:15px; border-radius:15px; margin-top:10px;">
+                    <input type="text" id="vReg" placeholder="Reg: BDD 0471">
+                    <input type="text" id="vMake" placeholder="Model: Honda Hornet" style="margin-top:8px;">
+                    <button class="btn-p" onclick="addVehicle()">Add Vehicle</button>
+                </div>
+            </div>
+
+            <div class="card" style="border: 1px solid var(--border);">
+                <label class="label-sm" style="color:var(--primary); margin-bottom: 15px; display: block;">
+                    SECURITY SETTINGS
+                </label>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+
+                    <input type="password" id="oldPass" placeholder="Current Password">
+                    <input type="password" id="newPass" placeholder="New Password">
+
+                    <button class="btn-p" onclick="updateCredentials()" style="width:100%; margin-top: 5px;">
+                        Update Password
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+        <div class="nav-bar">
+            <div class="nav-item active" onclick="nav('dash', this)"><i>🏠</i>Dash</div>
+            <div class="nav-item" onclick="nav('entry', this)"><i>💸</i>Activity</div>
+            <div class="nav-item" onclick="nav('analysis', this)"><i>🧠</i>Engine</div>
+            <div class="nav-item" onclick="nav('assets', this)"><i>📦</i>Assets</div>
+            <div class="nav-item" onclick="nav('stats', this)"><i>📊</i>Stats</div>
+            <div class="nav-item" onclick="nav('setup', this)"><i>⚙️</i>Setup</div>
+        </div>
+
+        <script>
+
+
+            const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', 'sb_publishable_cPy4XEg_f2eQEo0N-3UMyg_qX4nDtF8');
+
+            let reportData = [];
+            let txs = [], conf = {}, vehs = [], bal = {}, filteredTxs = [], physAssets = [], loans = [];
+
+            const CATS = {
+                Income: {
+                    "Salary": ["Monthly Base", "Overtime", "Bonus"],
+                    "Freelance": ["Web Development", "Consulting"],
+                    "Claims & Refunds": ["Broadband Claim", "Medical Refund", "Insurance Claim"],
+                    "Gifts": ["Personal", "Foreign Transaction"],
+                    "Other": ["Dividends", "Interest", "General"],
+                    "Debt & Finance": ["Loan (Borrowing)", "Debt Collection"]
+                },
+
+                Expense: {
+                    "Home Use": ["Monthly House Expense", "Mother", "Father", "Grocery"],
+                    "Maintenance & Utilities": ["Utilities (Water/Elec)", "Furniture/Hardware", "Home Repairs"],
+                    "Foods & Beverages": ["Breakfast", "Lunch", "Dinner", "Snack", "Bakery Item", "Drinks"],
+                    "Transportation": ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "Commuting (Bus/Train)", "Parking"],
+                    "Telecommunication": ["Mobile Reload", "Internet/Data Bundle", "Cable TV"],
+                    "Digital Services & Subscriptions": ["Cloud Storage (Google/GDrive)", "Streaming (Spotify/Netflix)", "Social Media (X/Meta)", "Developer Tools (Supabase)", "Software & Apps"],
+                    "Admissions & Fees": ["Site Entry Tickets", "Movie Tickets", "Camping Fees", "Locker & Helmet Storage", "Local Guide Fees"],
+                    "Healthcare": ["Medicine", "Doctor Visit", "Supplement", "Hospital Bill"],
+                    "Fashion & Grooming": ["Wearable", "Cosmetics", "Grooming/Salon", "Top Wear", "Bottom Wear", "Underwear", "Footwear"],
+                    "Entertainment": ["Movies", "Hobby", "Social Events"],
+                    "Material & Chemicals": ["Tools", "Accessories", "Gadgets", "Chemicals"],
+                    "Education": ["Courses", "Books", "Certifications"],
+                    "Debt & Finance": ["Loan Repayment", "Lending", "Pawn Interest", "Bank Charges", "Credit Card", "Gifts"]
+                }
+
+            };
+
+
+            window.validateLogin = async function () {
+                const userInp = document.getElementById('loginUser').value.trim();
+                const passInp = document.getElementById('loginPass').value.trim();
+                const btn = document.getElementById('loginBtn');
+
+                // Identify the bcrypt library correctly
+                const bcryptLib = window.bcrypt || (window.dcodeIO && window.dcodeIO.bcrypt);
+
+                if (!bcryptLib) {
+                    showLoginError("Security library still loading... please wait 2 seconds.");
+                    return;
+                }
+
+                if (!userInp || !passInp) {
+                    showLoginError("Please fill all fields");
+                    return;
+                }
+
+                btn.innerText = "Authenticating...";
+                btn.disabled = true;
+
+                try {
+                    const { data, error } = await supa
+                        .from('User_Credentials')
+                        .select('password')
+                        .eq('username', userInp)
+                        .single();
+
+                    if (error || !data) {
+                        showLoginError("Invalid Username");
+                        resetLoginBtn(btn);
+                        return;
+                    }
+
+                    // Use the identified library to compare
+                    const isValid = bcryptLib.compareSync(passInp, data.password);
+
+                    if (isValid) {
+                        document.getElementById('loginOverlay').style.display = 'none';
+                        load();
+                    } else {
+                        showLoginError("Invalid Password");
+                        resetLoginBtn(btn);
+                    }
+                } catch (err) {
+                    console.error("Login System Error:", err);
+                    resetLoginBtn(btn);
+                    showLoginError("Connection Error");
+                }
+            }
+
+            function resetLoginBtn(btn) {
+                btn.innerText = "Unlock Access";
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            }
+
+            function showLoginError(message) {
+                const err = document.getElementById('loginError');
+                err.innerText = message;
+                err.style.display = 'block';
+                // Shake effect
+                err.parentElement.style.animation = "shake 0.2s ease-in-out 0s 2";
+            }
+
+            window.addEventListener('DOMContentLoaded', () => {
+                const overlay = document.getElementById('loginOverlay');
+                if (overlay) {
+                    overlay.style.display = 'flex';
+                }
+                sessionStorage.removeItem('isVaultUnlocked');
+                // Initialize date inputs
+                const today = new Date().toISOString().split('T')[0];
+                ['eDate', 'tDate', 'aDate'].forEach(id => {
+                    if (document.getElementById(id)) document.getElementById(id).value = today;
+                });
+            });
+
+            async function updateCredentials() {
+                const hasher = window.bcrypt || (window.dcodeIO && window.dcodeIO.bcrypt);
+                const oldPassEl = document.getElementById('oldPass');
+                const newPassEl = document.getElementById('newPass');
+
+                // Safety Check: Ensure UI elements exist
+                if (!oldPassEl || !newPassEl) return msg("UI Error: Input fields missing");
+
+                try {
+                    // 1. Fetch the hash directly from the database
+                    const { data, error } = await supa
+                        .from('User_Credentials')
+                        .select('password')
+                        .eq('id', 1)
+                        .single();
+
+                    // 2. Audit: Check for 'password' instead of 'val'
+                    if (error || !data || !data.password) {
+                        console.error("Audit Error: System password record (hash) is missing from DB.");
+                        return msg("Error: system password record not found");
+                    }
+
+                    const storedHash = data.password; // Changed from data.val to data.password
+                    const userInput = oldPassEl.value;
+
+                    // 3. Perform comparison (Both are now guaranteed to be strings)
+                    const isMatch = hasher.compareSync(userInput, storedHash);
+
+                    if (!isMatch) {
+                        return msg("Current password incorrect");
+                    }
+
+                    // 4. Hash and Update the new password
+                    const salt = hasher.genSaltSync(10);
+                    const newHash = hasher.hashSync(newPassEl.value, salt);
+
+                    const { updateError } = await supa
+                        .from('User_Credentials')
+                        .update({ password: newHash })
+                        .eq('id', 1);
+
+                    if (updateError) throw updateError;
+
+                    msg("Credentials updated successfully");
+                    oldPassEl.value = '';
+                    newPassEl.value = '';
+
+                } catch (e) {
+                    console.error("Security Engine Error:", e);
+                    msg("Update failed: Illegal arguments prevented");
+                }
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+            // --- CORE ENGINE & LOAD ---
+
+            async function load() {
+                try {
+                    // 1. Parallel Fetch
+                    const [resConf, resTxs, resVehs, resAssets, resLoans] = await Promise.all([
+                        supa.from('Config').select('*').single(),
+                        supa.from('Transaction_Records').select('*').order('Date', { ascending: false }),
+                        supa.from('Vehicles').select('*'),
+                        supa.from('Physical_Assets').select('*'),
+                        supa.from('Finance_Management').select('*').eq('Status', 'Active')
+                    ]);
+
+                    // 2. Global Sync
+                    conf = resConf.data || {};
+                    txs = resTxs.data || [];
+                    vehs = resVehs.data || [];
+                    physAssets = resAssets.data || [];
+                    loans = resLoans.data || [];
+
+                    // 3. UI and Logic Trigger
+                    updateDateFilters();
+
+                    // This ensures variables are ready before render functions fire
+                    calculate();
+
+                    renderDashboard();
+                    renderVehicles();
+                    renderPhysicalAssets();
+                    renderLoanStatus();
+                    updateLenderSuggestions();
+
+                    // Refresh active tab views
+                    const analysisActive = document.getElementById('analysis')?.classList.contains('active');
+                    const statsActive = document.getElementById('stats')?.classList.contains('active');
+
+                    if (analysisActive) runProAnalysis();
+                    if (statsActive) runReport();
+
+                } catch (err) {
+                    console.error("Critical Load Error:", err);
+                    msg("Sync Failed. Check Console.");
+                }
+            }
+
+            function calculate() {
+                // 1. Establish Initial Baselines from Config
+                bal = {
+                    Main: parseFloat(conf.Main_Balance || 0),
+                    Saving: parseFloat(conf.Saving_Balance || 0),
+                    CC: parseFloat(conf.CCS || 0),
+                    Crypto: (parseFloat(conf.Crypto_Balance || 0) * parseFloat(conf.Rate || 0))
+                };
+
+                const curMonth = new Date().toISOString().slice(0, 7);
+                let mainStartBalance = bal.Main;
+                let mainMonthlyExpense = 0;
+
+                // 2. Adjust for ALL Transactions (Ledger Logic)
+                txs.forEach(t => {
+                    const a = parseFloat(t.Amount || 0);
+
+                    // FIX: Removed "if (t.Account === 'Crypto') return" to allow ledger updates
+                    const accMap = {
+                        "Main": "Main",
+                        "Saving": "Saving",
+                        "Credit Card": "CC",
+                        "Crypto": "Crypto" // Added Crypto to map
+                    };
+                    const key = accMap[t.Account];
+
+                    if (key && bal[key] !== undefined) {
+                        t.Type === 'Income' ? bal[key] += a : bal[key] -= a;
+
+                        // Monthly Main Account Tracking
+                        if (t.Account === "Main") {
+                            if (t.Date.startsWith(curMonth)) {
+                                if (t.Type === "Expense") mainMonthlyExpense += a;
+                            } else {
+                                // Pre-current month transactions define the "Starting Pool"
+                                t.Type === 'Income' ? mainStartBalance += a : mainStartBalance -= a;
+                            }
+                        }
+                    }
+                });
+
+                // 3. Loan & Lending Module
+                let totalLent = 0;    // Money owed to you (Asset)
+                let totalBorrowed = 0; // Money you owe (Liability)
+                loans.forEach(l => {
+                    const val = parseFloat(l.Amount || 0);
+                    l.Type === 'Lending' ? totalLent += val : totalBorrowed += val;
+                });
+
+                // 4. Net Worth Math
+                const ccLimit = parseFloat(conf.CCL || 0);
+                const ccDebt = Math.max(0, ccLimit - bal.CC);
+
+                // Total Cash available right now (Includes Crypto ledger updates)
+                const totalCash = bal.Main + bal.Saving + bal.Crypto;
+                // Total Debt (CC + Loans)
+                const totalLiabilities = ccDebt + totalBorrowed;
+
+                // Net Worth Calculation
+                const liquid = (totalCash + totalLent) - totalLiabilities;
+                const physical = physAssets.reduce((s, a) => s + getDepreciatedValue(a), 0);
+                const total = liquid + physical;
+
+                // 5. Update UI Numbers
+                const setVal = (id, val) => {
+                    if (document.getElementById(id)) document.getElementById(id).innerText = Math.round(val).toLocaleString();
+                };
+                setVal('vMain', bal.Main);
+                setVal('vSave', bal.Saving);
+                setVal('vCC', bal.CC);
+                setVal('vCry', bal.Crypto);
+                setVal('netVal', total);
+
+                // 6. Update Dashboard Rings
+
+                // Ring 1: LIQUIDITY (Gold) - Cash vs Debt
+                const liquidityPct = ((totalCash - totalLiabilities) / Math.max(totalCash, 1)) * 100;
+                updateRing('overallRing', 'overallPct', liquidityPct);
+
+                // Ring 2: ASSETS (Purple) - Physical Ratio
+                // FIX: Using Math.abs(total) or floor to ensure negative net worth doesn't break SVG
+                const assetBase = Math.max(Math.abs(total), 1);
+                updateRing('assetRing', 'assetPct', (physical / assetBase) * 100);
+
+                // Ring 3: AVAILABLE (Green) - Monthly Main Budget
+                const monthRemaining = mainStartBalance - mainMonthlyExpense;
+                const remainingPct = (monthRemaining / Math.max(mainStartBalance, 1)) * 100;
+                updateRing('monthRing', 'monthPct', remainingPct);
+            }
+
+            function updateRing(id, textId, pct) {
+                const ring = document.getElementById(id);
+                const text = document.getElementById(textId);
+
+                // Allow pct to go above 100 or below 0 for calculation, but clamp for visual
+                const safePct = Math.max(0, Math.min(100, isNaN(pct) ? 0 : pct));
+
+                if (ring) {
+                    const circumference = 100; // Assumes pathLength="100" in SVG
+                    const offset = circumference - (safePct / 100) * circumference;
+                    ring.style.strokeDasharray = circumference;
+                    ring.style.strokeDashoffset = offset;
+                }
+
+                if (text) text.innerText = Math.round(pct) + '%';
+            }
+
+            function renderSubPie(txList, chartId, legendId) {
+                const expenses = txList.filter(t => t.Type === 'Expense');
+                const total = expenses.reduce((s, t) => s + (+t.Amount), 0);
+                const subCats = {};
+
+                // Aggregate by Subcategory
+                expenses.forEach(t => {
+                    subCats[t.Subcategory] = (subCats[t.Subcategory] || 0) + (+t.Amount);
+                });
+
+                // Sort and take top 6, group others
+                const sorted = Object.entries(subCats).sort((a, b) => b[1] - a[1]);
+                const top = sorted.slice(0, 5);
+                if (sorted.length > 5) {
+                    const otherSum = sorted.slice(5).reduce((s, x) => s + x[1], 0);
+                    top.push(["Others", otherSum]);
+                }
+
+                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
+                let gradient = [];
+                let currentPct = 0;
+                let legendHtml = '';
+
+                top.forEach((item, i) => {
+                    const pct = (item[1] / total) * 100;
+                    const color = colors[i];
+                    gradient.push(`${color} ${currentPct}% ${currentPct + pct}%`);
+                    currentPct += pct;
+
+                    legendHtml += `
     <div class="legend-item">
         <div class="legend-color" style="background:${color}"></div>
         <span>${item[0]}</span>
         <div class="legend-pct">${Math.round(pct)}%</div>
     </div>`;
-    });
+                });
 
-    const chartEl = document.getElementById(chartId);
-    if (chartEl) chartEl.style.background = total > 0 ? `conic-gradient(${gradient.join(', ')})` : 'var(--border)';
-    document.getElementById(legendId).innerHTML = total > 0 ? legendHtml : '<center style="grid-column: span 2;">No Data</center>';
-}
+                const chartEl = document.getElementById(chartId);
+                if (chartEl) chartEl.style.background = total > 0 ? `conic-gradient(${gradient.join(', ')})` : 'var(--border)';
+                document.getElementById(legendId).innerHTML = total > 0 ? legendHtml : '<center style="grid-column: span 2;">No Data</center>';
+            }
 
-// --- NAVIGATION ---
+            // --- NAVIGATION ---
 
-function nav(id, btn) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    if(btn) btn.classList.add('active');
+            function nav(id, btn) {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById(id).classList.add('active');
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                if (btn) btn.classList.add('active');
 
-    const titles = {'dash':'Overview','entry':'Activity','analysis':'Engine','assets':'Assets','stats':'Reports','setup':'Setup'};
-    document.getElementById('vTitle').innerText = titles[id] || 'Finance';
-    
-    if (id !== 'dash') clearForms();
+                const titles = { 'dash': 'Overview', 'entry': 'Activity', 'analysis': 'Engine', 'assets': 'Assets', 'stats': 'Reports', 'setup': 'Setup' };
+                document.getElementById('vTitle').innerText = titles[id] || 'Finance';
 
-    // FIXED: Reset filters to current month when entering Stats
-    if (id === 'stats') {
-        const now = new Date();
-        const curYear = now.getFullYear().toString();
-        const curMonth = "-" + (now.getMonth() + 1).toString().padStart(2, '0') + "-";
-        
-        if (document.getElementById('fYear')) document.getElementById('fYear').value = curYear;
-        if (document.getElementById('fMonth')) document.getElementById('fMonth').value = curMonth;
-        
-        runReport(); 
-    }
+                if (id !== 'dash') clearForms();
 
-    if (id === 'analysis') runProAnalysis();
-    load(); 
-}
+                // FIXED: Reset filters to current month when entering Stats
+                if (id === 'stats') {
+                    const now = new Date();
+                    const curYear = now.getFullYear().toString();
+                    const curMonth = "-" + (now.getMonth() + 1).toString().padStart(2, '0') + "-";
 
-function switchEntryTab(mode) {
-    const isTx = mode === 'tx';
-    document.getElementById('formTx').style.display = isTx ? 'block' : 'none';
-    document.getElementById('formTf').style.display = isTx ? 'none' : 'block';
-    
-    document.getElementById('tabTx').style.background = isTx ? 'var(--primary)' : 'transparent';
-    document.getElementById('tabTx').style.color = isTx ? 'white' : 'var(--sub)';
-    document.getElementById('tabTf').style.background = isTx ? 'transparent' : 'var(--primary)';
-    document.getElementById('tabTf').style.color = isTx ? 'var(--sub)' : 'white';
-}
+                    if (document.getElementById('fYear')) document.getElementById('fYear').value = curYear;
+                    if (document.getElementById('fMonth')) document.getElementById('fMonth').value = curMonth;
 
-// --- FORM & TRANSACTION LOGIC ---
+                    runReport();
+                }
 
-function loadCats() {
-    const type = document.getElementById('eType').value;
-    const catSelect = document.getElementById('eCat');
-    if(!CATS[type]) return;
-    catSelect.innerHTML = Object.keys(CATS[type]).map(c => `<option>${c}</option>`).join('');
-    loadSubs();
-}
+                if (id === 'analysis') runProAnalysis();
+                load();
+            }
 
-// 1. Updated loadSubs to initialize the specialized logic
-function loadSubs() {
-    const type = document.getElementById('eType').value;
-    const cat = document.getElementById('eCat').value;
-    const subSelect = document.getElementById('eSub');
-    if(!CATS[type][cat]) return;
-    
-    subSelect.innerHTML = CATS[type][cat].map(s => `<option>${s}</option>`).join('');
-    
-    // Trigger the toggle logic immediately when category changes
-    toggleSpecialBoxes();
-}
+            function switchEntryTab(mode) {
+                const isTx = mode === 'tx';
+                document.getElementById('formTx').style.display = isTx ? 'block' : 'none';
+                document.getElementById('formTf').style.display = isTx ? 'none' : 'block';
 
-async function toggleSpecialBoxes() {
-    const type = document.getElementById('eType').value;
-    const cat = document.getElementById('eCat').value;
-    const sub = document.getElementById('eSub').value;
-    
-    const vBox = document.getElementById('vehBox');
-    const lBox = document.getElementById('lenderBox');
-    
-    // Handle Vehicle Box
-    vBox.style.display = (cat === "Transportation" && sub !== "Commuting (Bus/Train)") ? "block" : "none";
-    
-    // Handle Lender/Borrower Box
-    const isDebt = (cat === "Debt & Finance");
-    const isLoanSub = (sub === "Loan (Borrowing)" || sub === "Loan Repayment" || sub === "Lending" || sub === "Debt Collection");
+                document.getElementById('tabTx').style.background = isTx ? 'var(--primary)' : 'transparent';
+                document.getElementById('tabTx').style.color = isTx ? 'white' : 'var(--sub)';
+                document.getElementById('tabTf').style.background = isTx ? 'transparent' : 'var(--primary)';
+                document.getElementById('tabTf').style.color = isTx ? 'var(--sub)' : 'white';
+            }
 
-    if (isDebt && isLoanSub) {
-        lBox.style.display = "block";
-        
-        // FIX: Use the 'neq' (Not Equal) filter or check for existence correctly
-        const { data, error } = await supa
-            .from('Finance_Management') // Ensure this matches your transaction table name
-            .select('Person_Name')
-            .not('Lender', 'is', null); // Ensure 'Lender' is capitalized if your column is
-            
-        if (!error && data) {
-            const uniqueNames = [...new Set(data.map(item => item.Lender).filter(n => n))];
-            const list = document.getElementById('lenderSuggestions');
-            list.innerHTML = ""; 
-            uniqueNames.forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name;
-                list.appendChild(opt);
-            });
-        }
-    } else {
-        lBox.style.display = "none";
-    }
-}
+            // --- FORM & TRANSACTION LOGIC ---
 
-// 3. Updated Name Populator with Filter Support
-async function updateLenderSuggestions() {
+            function loadCats() {
+                const type = document.getElementById('eType').value;
+                const catSelect = document.getElementById('eCat');
+                if (!CATS[type]) return;
+                catSelect.innerHTML = Object.keys(CATS[type]).map(c => `<option>${c}</option>`).join('');
+                loadSubs();
+            }
 
-    const list = document.getElementById('lenderSuggestions');
-    let query = supa.from('Finance_Management')
-        .select('Person Name')
-        .eq('Status', 'Active');
-    
-    // Only filter by Borrowing/Lending if we are in a repayment/collection subcategory
-    if (filterType) {
-        query = query.eq('Type', filterType);
-    }
+            // 1. Updated loadSubs to initialize the specialized logic
+            function loadSubs() {
+                const type = document.getElementById('eType').value;
+                const cat = document.getElementById('eCat').value;
+                const subSelect = document.getElementById('eSub');
+                if (!CATS[type][cat]) return;
 
-    const { data, error } = await query;
+                subSelect.innerHTML = CATS[type][cat].map(s => `<option>${s}</option>`).join('');
 
-    if (error) {
-        console.error("Supabase Error:", error);
-        return;
-    }
+                // Trigger the toggle logic immediately when category changes
+                toggleSpecialBoxes();
+            }
 
-    if (data && data.length > 0) {
-        // SAFETY CHECK: Filter out any nulls and ensure the property exists 
-        // to avoid "undefined" showing in the list
-        const uniqueNames = [...new Set(
-            data.filter(item => item && item.Person_Name) 
-                .map(item => item.Person_Name)
-        )];
+            async function toggleSpecialBoxes() {
+                const type = document.getElementById('eType').value;
+                const cat = document.getElementById('eCat').value;
+                const sub = document.getElementById('eSub').value;
 
-        if (uniqueNames.length > 0) {
-            list.innerHTML = uniqueNames.map(name => `<option value="${name}">`).join('');
-        } else {
-            list.innerHTML = ''; // Clear list if no names match
-        }
-    } else {
-        list.innerHTML = ''; // Clear list if no data found
-    }
-    
-}
+                const vBox = document.getElementById('vehBox');
+                const lBox = document.getElementById('lenderBox');
 
-function checkLoanPrompt() {
-    const type = document.getElementById('eType').value;
-    const cat = document.getElementById('eCat').value;
-    const sub = document.getElementById('eSub').value;
-    
-    // Show box if:
-    // 1. Expense -> Lending
-    // 2. Income -> Loan (Borrowing)
-    // 3. Expense -> Loan Repayment (Optional, if you want to track repayments by name)
-    const isLoan = (cat === "Debt & Finance" && (sub === "Lending" || sub === "Loan (Borrowing)"));
-    
-    document.getElementById('lenderBox').style.display = isLoan ? 'block' : 'none';
-}
+                // Handle Vehicle Box
+                vBox.style.display = (cat === "Transportation" && sub !== "Commuting (Bus/Train)") ? "block" : "none";
 
-async function saveTx() {
-    const date = document.getElementById('eDate').value;
-    const acc = document.getElementById('eAcc').value;
-    const type = document.getElementById('eType').value;
-    const cat = document.getElementById('eCat').value;
-    const sub = document.getElementById('eSub').value;
-    const amt = parseFloat(document.getElementById('eAmt').value);
-    let rem = document.getElementById('eRem').value;
-    const vehicle = document.getElementById('eVeh').value;
-    
-    // Check if lender/person is from a dropdown or a "New" input field
-    const personSelect = document.getElementById('eLender').value;
-    const personNameInput = document.getElementById('newLenderName') ? document.getElementById('newLenderName').value.trim() : "";
-    const person = personSelect === "New" ? personNameInput : personSelect;
+                // Handle Lender/Borrower Box
+                const isDebt = (cat === "Debt & Finance");
+                const isLoanSub = (sub === "Loan (Borrowing)" || sub === "Loan Repayment" || sub === "Lending" || sub === "Debt Collection");
 
-    if (!amt || amt <= 0) return msg("Please enter a valid amount");
-    
-    const financeTriggers = ["Loan Repayment", "Lending", "Loan (Borrowing)", "Debt Collection"];
-    if ((cat === "Debt & Finance") && financeTriggers.includes(sub) && !person) return msg("Please specify a person/lender");
+                if (isDebt && isLoanSub) {
+                    lBox.style.display = "block";
 
-    // Handle Vehicle Remarks for Transportation
-    const vehicleTriggers = ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "Parking"];
-    if (cat === "Transportation" && vehicleTriggers.includes(sub)) {
-        if (vehicle) rem = rem ? `${vehicle} - ${rem}` : vehicle;
-    }
+                    // FIX: Use the 'neq' (Not Equal) filter or check for existence correctly
+                    const { data, error } = await supa
+                        .from('Finance_Management') // Ensure this matches your transaction table name
+                        .select('Person_Name')
+                        .not('Lender', 'is', null); // Ensure 'Lender' is capitalized if your column is
 
-    // 1. Record the primary Transaction
-    const { error: txErr } = await supa.from('Transaction_Records').insert([{
-        Date: date,
-        Account: acc,
-        Type: type,
-        Category: cat,
-        Subcategory: sub,
-        Amount: amt,
-        Remark: rem
-    }]);
+                    if (!error && data) {
+                        const uniqueNames = [...new Set(data.map(item => item.Lender).filter(n => n))];
+                        const list = document.getElementById('lenderSuggestions');
+                        list.innerHTML = "";
+                        uniqueNames.forEach(name => {
+                            const opt = document.createElement('option');
+                            opt.value = name;
+                            list.appendChild(opt);
+                        });
+                    }
+                } else {
+                    lBox.style.display = "none";
+                }
+            }
 
-    if (txErr) return msg("Transaction log failed");
+            // 3. Updated Name Populator with Filter Support
+            async function updateLenderSuggestions() {
 
-    // 2. Update Finance Management (Loans/Lending/Debt)
-    if (cat === "Debt & Finance" && person) {
-        let amountChange = 0;
-        let ledgerType = "";
+                const list = document.getElementById('lenderSuggestions');
+                let query = supa.from('Finance_Management')
+                    .select('Person Name')
+                    .eq('Status', 'Active');
 
-        const subCheck = sub.replace(/\s/g, '').toLowerCase();
+                // Only filter by Borrowing/Lending if we are in a repayment/collection subcategory
+                if (filterType) {
+                    query = query.eq('Type', filterType);
+                }
 
-        // Logic for Borrowing (Loans taken from others)
-        if (type === "Income" && subCheck.includes("loan(borrowing)")) {
-            amountChange = amt; 
-            ledgerType = "Borrowing";
-        } 
-        else if (type === "Expense" && subCheck.includes("loanrepayment")) {
-            amountChange = -amt; 
-            ledgerType = "Borrowing";
-        } 
-        // Logic for Lending (Money given to others)
-        else if (type === "Expense" && subCheck === "lending") {
-            amountChange = amt; 
-            ledgerType = "Lending";
-        } 
-        else if (type === "Income" && subCheck.includes("debtcollection")) {
-            amountChange = -amt; 
-            ledgerType = "Lending";
-        }
+                const { data, error } = await query;
 
-        if (amountChange !== 0) {
-            // Check for existing active record for this person and type
-            const { data: existing, error: fetchErr } = await supa.from('Finance_Management')
-                .select('*')
-                .eq('Person_Name', person)
-                .eq('Type', ledgerType)
-                .eq('Status', 'Active')
-                .maybeSingle();
+                if (error) {
+                    console.error("Supabase Error:", error);
+                    return;
+                }
 
-            if (existing) {
-                // Update existing balance
-                const newBal = Math.max(0, existing.Amount + amountChange);
-                const { error: updErr } = await supa.from('Finance_Management').update({
-                    Amount: newBal,
-                    Status: newBal <= 0 ? 'Settled' : 'Active',
-                    Last_Update: date
-                }).eq('id', existing.id);
+                if (data && data.length > 0) {
+                    // SAFETY CHECK: Filter out any nulls and ensure the property exists 
+                    // to avoid "undefined" showing in the list
+                    const uniqueNames = [...new Set(
+                        data.filter(item => item && item.Person_Name)
+                            .map(item => item.Person_Name)
+                    )];
 
-                if (updErr) console.error("Ledger Update Error:", updErr);
-            } else if (amountChange > 0) {
-                // Create a new record if it's a new loan or new lending
-                const { error: insErr } = await supa.from('Finance_Management').insert([{
-                    Person_Name: person,
-                    Amount: amt,
-                    Type: ledgerType,
+                    if (uniqueNames.length > 0) {
+                        list.innerHTML = uniqueNames.map(name => `<option value="${name}">`).join('');
+                    } else {
+                        list.innerHTML = ''; // Clear list if no names match
+                    }
+                } else {
+                    list.innerHTML = ''; // Clear list if no data found
+                }
+
+            }
+
+            function checkLoanPrompt() {
+                const type = document.getElementById('eType').value;
+                const cat = document.getElementById('eCat').value;
+                const sub = document.getElementById('eSub').value;
+
+                // Show box if:
+                // 1. Expense -> Lending
+                // 2. Income -> Loan (Borrowing)
+                // 3. Expense -> Loan Repayment (Optional, if you want to track repayments by name)
+                const isLoan = (cat === "Debt & Finance" && (sub === "Lending" || sub === "Loan (Borrowing)"));
+
+                document.getElementById('lenderBox').style.display = isLoan ? 'block' : 'none';
+            }
+
+            async function saveTx() {
+                const date = document.getElementById('eDate').value;
+                const acc = document.getElementById('eAcc').value;
+                const type = document.getElementById('eType').value;
+                const cat = document.getElementById('eCat').value;
+                const sub = document.getElementById('eSub').value;
+                const amt = parseFloat(document.getElementById('eAmt').value);
+                let rem = document.getElementById('eRem').value;
+                const vehicle = document.getElementById('eVeh').value;
+
+                // Check if lender/person is from a dropdown or a "New" input field
+                const personSelect = document.getElementById('eLender').value;
+                const personNameInput = document.getElementById('newLenderName') ? document.getElementById('newLenderName').value.trim() : "";
+                const person = personSelect === "New" ? personNameInput : personSelect;
+
+                if (!amt || amt <= 0) return msg("Please enter a valid amount");
+
+                const financeTriggers = ["Loan Repayment", "Lending", "Loan (Borrowing)", "Debt Collection"];
+                if ((cat === "Debt & Finance") && financeTriggers.includes(sub) && !person) return msg("Please specify a person/lender");
+
+                // Handle Vehicle Remarks for Transportation
+                const vehicleTriggers = ["Fuel", "Service & Repairs", "Legal (Insurance/Rev)", "Parking"];
+                if (cat === "Transportation" && vehicleTriggers.includes(sub)) {
+                    if (vehicle) rem = rem ? `${vehicle} - ${rem}` : vehicle;
+                }
+
+                // 1. Record the primary Transaction
+                const { error: txErr } = await supa.from('Transaction_Records').insert([{
                     Date: date,
-                    Category: 'Personal',
-                    Status: 'Active',
-                    Last_Update: date
+                    Account: acc,
+                    Type: type,
+                    Category: cat,
+                    Subcategory: sub,
+                    Amount: amt,
+                    Remark: rem
                 }]);
 
-                if (insErr) console.error("Ledger Insert Error:", insErr);
+                if (txErr) return msg("Transaction log failed");
+
+                // 2. Update Finance Management (Loans/Lending/Debt)
+                if (cat === "Debt & Finance" && person) {
+                    let amountChange = 0;
+                    let ledgerType = "";
+
+                    const subCheck = sub.replace(/\s/g, '').toLowerCase();
+
+                    // Logic for Borrowing (Loans taken from others)
+                    if (type === "Income" && subCheck.includes("loan(borrowing)")) {
+                        amountChange = amt;
+                        ledgerType = "Borrowing";
+                    }
+                    else if (type === "Expense" && subCheck.includes("loanrepayment")) {
+                        amountChange = -amt;
+                        ledgerType = "Borrowing";
+                    }
+                    // Logic for Lending (Money given to others)
+                    else if (type === "Expense" && subCheck === "lending") {
+                        amountChange = amt;
+                        ledgerType = "Lending";
+                    }
+                    else if (type === "Income" && subCheck.includes("debtcollection")) {
+                        amountChange = -amt;
+                        ledgerType = "Lending";
+                    }
+
+                    if (amountChange !== 0) {
+                        // Check for existing active record for this person and type
+                        const { data: existing, error: fetchErr } = await supa.from('Finance_Management')
+                            .select('*')
+                            .eq('Person_Name', person)
+                            .eq('Type', ledgerType)
+                            .eq('Status', 'Active')
+                            .maybeSingle();
+
+                        if (existing) {
+                            // Update existing balance
+                            const newBal = Math.max(0, existing.Amount + amountChange);
+                            const { error: updErr } = await supa.from('Finance_Management').update({
+                                Amount: newBal,
+                                Status: newBal <= 0 ? 'Settled' : 'Active',
+                                Last_Update: date
+                            }).eq('id', existing.id);
+
+                            if (updErr) console.error("Ledger Update Error:", updErr);
+                        } else if (amountChange > 0) {
+                            // Create a new record if it's a new loan or new lending
+                            const { error: insErr } = await supa.from('Finance_Management').insert([{
+                                Person_Name: person,
+                                Amount: amt,
+                                Type: ledgerType,
+                                Date: date,
+                                Category: 'Personal',
+                                Status: 'Active',
+                                Last_Update: date
+                            }]);
+
+                            if (insErr) console.error("Ledger Insert Error:", insErr);
+                        }
+                    }
+                }
+
+                msg("Entry Saved Successfully");
+                clearForms();
+                if (typeof load === "function") await load();
             }
-        }
-    }
 
-    msg("Entry Saved Successfully");
-    clearForms();
-    if (typeof load === "function") await load();
-}
+            async function saveConf() {
+                // 1. Get values from Setup/Baseline inputs
+                const main = parseFloat(document.getElementById('cMain').value) || 0;
+                const save = parseFloat(document.getElementById('cSave').value) || 0;
+                const limit = parseFloat(document.getElementById('sCCL').value) || 0;  // CC Total Limit
+                const spent = parseFloat(document.getElementById('sCCS').value) || 0;  // CC Current Spent
+                const rate = parseFloat(document.getElementById('cRate').value) || 0;
+                const crypto = parseFloat(document.getElementById('cCry').value) || 0;
 
-async function saveConf() {
-    // 1. Get values from Setup/Baseline inputs
-    const main = parseFloat(document.getElementById('cMain').value) || 0;
-    const save = parseFloat(document.getElementById('cSave').value) || 0;
-    const limit = parseFloat(document.getElementById('sCCL').value) || 0;  // CC Total Limit
-    const spent = parseFloat(document.getElementById('sCCS').value) || 0;  // CC Current Spent
-    const rate = parseFloat(document.getElementById('cRate').value) || 0;
-    const crypto = parseFloat(document.getElementById('cCry').value) || 0;
-    
-    // 2. Logic: CCS (Available) = Total Limit - Current Spent at bank
-    const available = limit - spent;
+                // 2. Logic: CCS (Available) = Total Limit - Current Spent at bank
+                const available = limit - spent;
 
-    const payload = {
-        Main_Balance: main,
-        Saving_Balance: save,
-        CCL: limit,      // Total Credit Limit
-        CCS: available,  // Available balance for the app to track
-        Rate: rate,
-        Crypto_Balance: crypto,
-        Budget: budget   // Dynamic goal for the dashboard ring
-    };
+                const payload = {
+                    Main_Balance: main,
+                    Saving_Balance: save,
+                    CCL: limit,      // Total Credit Limit
+                    CCS: available,  // Available balance for the app to track
+                    Rate: rate,
+                    Crypto_Balance: crypto,
+                    Budget: budget   // Dynamic goal for the dashboard ring
+                };
 
-    // 3. Update Supabase
-    const { error } = await supa.from('Config').upsert({ id: 1, ...payload });
-    
-    if (error) {
-        console.error("Sync Error:", error);
-        msg("Sync Failed");
-    } else {
-        msg("Baselines & Budget Synced");
-        await load(); // Trigger full recalculation and UI refresh
-    }
-}
+                // 3. Update Supabase
+                const { error } = await supa.from('Config').upsert({ id: 1, ...payload });
 
-async function delTx(id) {
-    if(confirm("Delete this record permanently?")) {
-        await supa.from('Transaction_Records').delete().eq('id', id);
-        msg("Record Deleted");
-        load();
-    }
-}
+                if (error) {
+                    console.error("Sync Error:", error);
+                    msg("Sync Failed");
+                } else {
+                    msg("Baselines & Budget Synced");
+                    await load(); // Trigger full recalculation and UI refresh
+                }
+            }
 
-async function doTransfer() {
-    const from = document.getElementById('tFrom').value;
-    const to = document.getElementById('tTo').value;
-    const amt = parseFloat(document.getElementById('tAmt').value);
-    const date = document.getElementById('tDate').value;
+            async function delTx(id) {
+                if (confirm("Delete this record permanently?")) {
+                    await supa.from('Transaction_Records').delete().eq('id', id);
+                    msg("Record Deleted");
+                    load();
+                }
+            }
 
-    if (!amt || isNaN(amt) || from === to) return msg("Invalid transfer details");
+            async function doTransfer() {
+                const from = document.getElementById('tFrom').value;
+                const to = document.getElementById('tTo').value;
+                const amt = parseFloat(document.getElementById('tAmt').value);
+                const date = document.getElementById('tDate').value;
 
-    // 1. Record Outgoing (Transfer Out)
-    await supa.from('Transaction_Records').insert([{
-        Date: date, Account: from, Type: 'Expense', Category: 'Transfer', Subcategory: 'Transfer Out', Amount: amt, Remark: `To ${to}`
-    }]);
+                if (!amt || isNaN(amt) || from === to) return msg("Invalid transfer details");
 
-    // 2. Record Incoming (Transfer In)
-    await supa.from('Transaction_Records').insert([{
-        Date: date, Account: to, Type: 'Income', Category: 'Transfer', Subcategory: 'Transfer In', Amount: amt, Remark: `From ${from}`
-    }]);
+                // 1. Record Outgoing (Transfer Out)
+                await supa.from('Transaction_Records').insert([{
+                    Date: date, Account: from, Type: 'Expense', Category: 'Transfer', Subcategory: 'Transfer Out', Amount: amt, Remark: `To ${to}`
+                }]);
 
-    msg("Transfer Completed");
-    clearForms();
-    load(); 
-}
+                // 2. Record Incoming (Transfer In)
+                await supa.from('Transaction_Records').insert([{
+                    Date: date, Account: to, Type: 'Income', Category: 'Transfer', Subcategory: 'Transfer In', Amount: amt, Remark: `From ${from}`
+                }]);
 
-// --- ASSETS & VEHICLES CRUD ---
+                msg("Transfer Completed");
+                clearForms();
+                load();
+            }
 
-async function addPhysicalAsset() {
+            // --- ASSETS & VEHICLES CRUD ---
 
-const payload = {
-        Name: document.getElementById('aName').value,
-        Value: parseFloat(document.getElementById('aVal').value),
-        Category: document.getElementById('aCat').value,
-        Specs: document.getElementById('aSpec').value,
-        Purchase_Date: document.getElementById('aDate').value // New Field
-    };
-    
-    const name = document.getElementById('aName').value;
-    const val = parseFloat(document.getElementById('aVal').value);
-    const cat = document.getElementById('aCat').value;
-    const spec = document.getElementById('aSpec').value;
-    const pdate = document.getElementById('aDate').value;
+            async function addPhysicalAsset() {
 
-    if(!name || !val) return msg("Name and Value required");
+                const payload = {
+                    Name: document.getElementById('aName').value,
+                    Value: parseFloat(document.getElementById('aVal').value),
+                    Category: document.getElementById('aCat').value,
+                    Specs: document.getElementById('aSpec').value,
+                    Purchase_Date: document.getElementById('aDate').value // New Field
+                };
 
-    const { error } = await supa.from('Physical_Assets').insert([{ Name: name, Value: val, Category: cat, Specs: spec, Purchase_Date: pdate }]);
-    if(error) msg("Error adding asset");
-    else { msg("Asset Added"); clearForms(); load(); }
-    
-}
+                const name = document.getElementById('aName').value;
+                const val = parseFloat(document.getElementById('aVal').value);
+                const cat = document.getElementById('aCat').value;
+                const spec = document.getElementById('aSpec').value;
+                const pdate = document.getElementById('aDate').value;
 
-async function delPhysAsset(id) {
-    if(confirm("Delete Asset?")) {
-        await supa.from('Physical_Assets').delete().eq('id', id);
-        load();
-    }
-}
+                if (!name || !val) return msg("Name and Value required");
 
-// Add this to your Global Script area
-function getDepreciatedValue(asset) {
-    const originalValue = parseFloat(asset.Value || 0);
-    const purchaseDate = new Date(asset.Purchase_Date || new Date());
-    const today = new Date();
-    
-    // Calculate months owned
-    const monthsOwned = (today.getFullYear() - purchaseDate.getFullYear()) * 12 + (today.getMonth() - purchaseDate.getMonth());
-    
-    // Set General Defaults based on your existing HTML <select> options
-    let lifespanYears = 5; 
-    let salvagePct = 0.10; // 10% scrap value
+                const { error } = await supa.from('Physical_Assets').insert([{ Name: name, Value: val, Category: cat, Specs: spec, Purchase_Date: pdate }]);
+                if (error) msg("Error adding asset");
+                else { msg("Asset Added"); clearForms(); load(); }
 
-    if (asset.Category === "Electronics") { lifespanYears = 3; salvagePct = 0.10; }
-    if (asset.Category === "Automobile") { lifespanYears = 10; salvagePct = 0.30; }
-    if (asset.Category === "Furniture") { lifespanYears = 8; salvagePct = 0.05; }
-    if (asset.Category === "Tools") { lifespanYears = 6; salvagePct = 0.05; }
-    if (asset.Category === "Jewelry") { lifespanYears = 50; salvagePct = 0.95; } // Holds value
+            }
 
-    const totalLifeMonths = lifespanYears * 12;
-    const salvageValue = originalValue * salvagePct;
+            async function delPhysAsset(id) {
+                if (confirm("Delete Asset?")) {
+                    await supa.from('Physical_Assets').delete().eq('id', id);
+                    load();
+                }
+            }
 
-    // Straight-Line Math
-    if (monthsOwned <= 0) return originalValue;
-    if (monthsOwned >= totalLifeMonths) return salvageValue;
+            // Add this to your Global Script area
+            function getDepreciatedValue(asset) {
+                const originalValue = parseFloat(asset.Value || 0);
+                const purchaseDate = new Date(asset.Purchase_Date || new Date());
+                const today = new Date();
 
-    const monthlyLoss = (originalValue - salvageValue) / totalLifeMonths;
-    const currentValue = originalValue - (monthlyLoss * monthsOwned);
+                // Calculate months owned
+                const monthsOwned = (today.getFullYear() - purchaseDate.getFullYear()) * 12 + (today.getMonth() - purchaseDate.getMonth());
 
-    return Math.max(currentValue, salvageValue);
-}
+                // Set General Defaults based on your existing HTML <select> options
+                let lifespanYears = 5;
+                let salvagePct = 0.10; // 10% scrap value
 
-async function addVehicle() {
-    const reg = document.getElementById('vReg').value;
-    const make = document.getElementById('vMake').value;
-    if(!reg) return msg("Registration required");
-    await supa.from('Vehicles').insert([{ Registration: reg, Model: make }]);
-    msg("Vehicle Added"); 
-    // Clear specific fields
-    document.getElementById('vReg').value = ''; 
-    document.getElementById('vMake').value = '';
-    load();
-}
+                if (asset.Category === "Electronics") { lifespanYears = 3; salvagePct = 0.10; }
+                if (asset.Category === "Automobile") { lifespanYears = 10; salvagePct = 0.30; }
+                if (asset.Category === "Furniture") { lifespanYears = 8; salvagePct = 0.05; }
+                if (asset.Category === "Tools") { lifespanYears = 6; salvagePct = 0.05; }
+                if (asset.Category === "Jewelry") { lifespanYears = 50; salvagePct = 0.95; } // Holds value
 
-async function delVehicle(id) {
-    if(confirm("Delete Vehicle?")) {
-        await supa.from('Vehicles').delete().eq('id', id);
-        load();
-    }
-}
+                const totalLifeMonths = lifespanYears * 12;
+                const salvageValue = originalValue * salvagePct;
+
+                // Straight-Line Math
+                if (monthsOwned <= 0) return originalValue;
+                if (monthsOwned >= totalLifeMonths) return salvageValue;
+
+                const monthlyLoss = (originalValue - salvageValue) / totalLifeMonths;
+                const currentValue = originalValue - (monthlyLoss * monthsOwned);
+
+                return Math.max(currentValue, salvageValue);
+            }
+
+            async function addVehicle() {
+                const reg = document.getElementById('vReg').value;
+                const make = document.getElementById('vMake').value;
+                if (!reg) return msg("Registration required");
+                await supa.from('Vehicles').insert([{ Registration: reg, Model: make }]);
+                msg("Vehicle Added");
+                // Clear specific fields
+                document.getElementById('vReg').value = '';
+                document.getElementById('vMake').value = '';
+                load();
+            }
+
+            async function delVehicle(id) {
+                if (confirm("Delete Vehicle?")) {
+                    await supa.from('Vehicles').delete().eq('id', id);
+                    load();
+                }
+            }
 
 
 
-// --- ANALYSIS ENGINE (Pro) ---
+            // --- ANALYSIS ENGINE (Pro) ---
 
-function runProAnalysis() {
-    const year = document.getElementById('aYear').value;
-    const month = document.getElementById('aMonth').value;
-    
-    // 1. Data Scoping
-    // pData: Based on UI filters (Selected Month)
-    const pData = txs.filter(t => {
-        return t.Date.startsWith(year) && (month === 'all' || t.Date.includes(month));
-    });
+            function runProAnalysis() {
+                const year = document.getElementById('aYear').value;
+                const month = document.getElementById('aMonth').value;
 
-    // currentMonthData: Actual calendar month (Current Month)
-    const curMonthStr = new Date().toISOString().slice(0, 7);
-    const currentMonthData = txs.filter(t => t.Date.startsWith(curMonthStr));
+                // 1. Data Scoping
+                // pData: Based on UI filters (Selected Month)
+                const pData = txs.filter(t => {
+                    return t.Date.startsWith(year) && (month === 'all' || t.Date.includes(month));
+                });
 
-    // txs: All history (Overall)
+                // currentMonthData: Actual calendar month (Current Month)
+                const curMonthStr = new Date().toISOString().slice(0, 7);
+                const currentMonthData = txs.filter(t => t.Date.startsWith(curMonthStr));
 
-    // 2. Financial Metrics
-    const inc = pData.filter(t => t.Type === 'Income').reduce((s, t) => s + (+t.Amount), 0);
-    const exp = pData.filter(t => t.Type === 'Expense').reduce((s, t) => s + (+t.Amount), 0);
-    const saveRate = inc > 0 ? ((inc - exp) / inc) * 100 : 0;
-    
-    // UI Updates (Metrics)
-    document.getElementById('anSaveRate').innerText = Math.round(saveRate) + "%";
-    document.getElementById('anSaveRate').style.color = saveRate > 20 ? 'var(--income)' : 'var(--expense)';
-    
-    const days = month === 'all' ? 365 : 30;
-    document.getElementById('anBurn').innerText = Math.round(exp / days).toLocaleString();
+                // txs: All history (Overall)
 
-    // 3. Efficiency Score Logic
-    let score = Math.max(0, Math.min(100, Math.round(saveRate * 0.8 + 20))); 
-    if(inc === 0) score = 0;
-    document.getElementById('proScore').innerText = score;
-    document.getElementById('proStatus').innerText = score > 75 ? "ELITE GROWTH" : (score > 40 ? "STABLE" : "NEEDS ATTENTION");
-    document.getElementById('proStatus').style.color = score > 75 ? "var(--income)" : (score > 40 ? "#fbbf24" : "var(--expense)");
+                // 2. Financial Metrics
+                const inc = pData.filter(t => t.Type === 'Income').reduce((s, t) => s + (+t.Amount), 0);
+                const exp = pData.filter(t => t.Type === 'Expense').reduce((s, t) => s + (+t.Amount), 0);
+                const saveRate = inc > 0 ? ((inc - exp) / inc) * 100 : 0;
 
-    // 4. Concentration Chart (Category Bars)
-    const cats = {};
-    pData.filter(t => t.Type === 'Expense').forEach(t => cats[t.Category] = (cats[t.Category] || 0) + (+t.Amount));
-    
-    const chart = document.getElementById('anChart');
-    chart.innerHTML = Object.keys(cats).sort((a,b) => cats[b] - cats[a]).slice(0, 5).map(c => {
-        const p = Math.round((cats[c] / exp) * 100);
-        return `
+                // UI Updates (Metrics)
+                document.getElementById('anSaveRate').innerText = Math.round(saveRate) + "%";
+                document.getElementById('anSaveRate').style.color = saveRate > 20 ? 'var(--income)' : 'var(--expense)';
+
+                const days = month === 'all' ? 365 : 30;
+                document.getElementById('anBurn').innerText = Math.round(exp / days).toLocaleString();
+
+                // 3. Efficiency Score Logic
+                let score = Math.max(0, Math.min(100, Math.round(saveRate * 0.8 + 20)));
+                if (inc === 0) score = 0;
+                document.getElementById('proScore').innerText = score;
+                document.getElementById('proStatus').innerText = score > 75 ? "ELITE GROWTH" : (score > 40 ? "STABLE" : "NEEDS ATTENTION");
+                document.getElementById('proStatus').style.color = score > 75 ? "var(--income)" : (score > 40 ? "#fbbf24" : "var(--expense)");
+
+                // 4. Concentration Chart (Category Bars)
+                const cats = {};
+                pData.filter(t => t.Type === 'Expense').forEach(t => cats[t.Category] = (cats[t.Category] || 0) + (+t.Amount));
+
+                const chart = document.getElementById('anChart');
+                chart.innerHTML = Object.keys(cats).sort((a, b) => cats[b] - cats[a]).slice(0, 5).map(c => {
+                    const p = Math.round((cats[c] / exp) * 100);
+                    return `
             <div style="margin-bottom:8px">
                 <div style="display:flex; justify-content:space-between; font-size:11px;"><span>${c}</span><span>${p}%</span></div>
                 <div style="width:100%; height:6px; background:var(--border); border-radius:4px;"><div style="width:${p}%; height:100%; background:var(--primary); border-radius:4px;"></div></div>
             </div>`;
-    }).join('');
+                }).join('');
 
-    // 5. Generate Insight
-    const topCat = Object.keys(cats).sort((a,b) => cats[b] - cats[a])[0] || "None";
-    document.getElementById('anInsights').innerHTML = `
+                // 5. Generate Insight
+                const topCat = Object.keys(cats).sort((a, b) => cats[b] - cats[a])[0] || "None";
+                document.getElementById('anInsights').innerHTML = `
         Spending <b>LKR ${exp.toLocaleString()}</b> vs Income <b>LKR ${inc.toLocaleString()}</b>. 
         Top expense is <b>${topCat}</b>. 
         ${saveRate < 20 ? "⚠️ Consider reducing discretionary spending." : "✅ Strong savings performance."}
     `;
-    
-    // 6. Daily Available Calculation
-    const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const today = now.getDate();
-    const daysRemaining = (lastDay - today) + 1;
 
-    const dailyTotal = (bal.Main + bal.Saving) / daysRemaining;
-    const dailyMain = bal.Main / daysRemaining;
-    const dailySave = bal.Saving / daysRemaining;
-    
-    const fmt = (n) => Math.max(0, n).toLocaleString(undefined, {maximumFractionDigits: 0});
-    document.getElementById('anDailyTotal').innerText = "LKR " + fmt(dailyTotal);
-    document.getElementById('anDailyMain').innerText = "LKR " + fmt(dailyMain);
-    document.getElementById('anDailySave').innerText = "LKR " + fmt(dailySave);
-    document.getElementById('daysLeftNote').innerText = `Based on ${daysRemaining} days remaining this month`;
+                // 6. Daily Available Calculation
+                const now = new Date();
+                const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                const today = now.getDate();
+                const daysRemaining = (lastDay - today) + 1;
 
-    // 7. --- PIE CHART SYSTEM ---
-    // Big Chart (Top)
-    renderSubPie(txs, 'pieAll', 'legendAll'); 
-    
-    // Small Charts (Bottom Side-by-Side)
-    renderSubPie(pData, 'pieSelected', 'legendSelected');
-    renderSubPie(currentMonthData, 'pieMonth', 'legendMonth');
-}
+                const dailyTotal = (bal.Main + bal.Saving) / daysRemaining;
+                const dailyMain = bal.Main / daysRemaining;
+                const dailySave = bal.Saving / daysRemaining;
 
-// --- REPORTS ---
+                const fmt = (n) => Math.max(0, n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+                document.getElementById('anDailyTotal').innerText = "LKR " + fmt(dailyTotal);
+                document.getElementById('anDailyMain').innerText = "LKR " + fmt(dailyMain);
+                document.getElementById('anDailySave').innerText = "LKR " + fmt(dailySave);
+                document.getElementById('daysLeftNote').innerText = `Based on ${daysRemaining} days remaining this month`;
 
-function updateDateFilters() {
+                // 7. --- PIE CHART SYSTEM ---
+                // Big Chart (Top)
+                renderSubPie(txs, 'pieAll', 'legendAll');
+
+                // Small Charts (Bottom Side-by-Side)
+                renderSubPie(pData, 'pieSelected', 'legendSelected');
+                renderSubPie(currentMonthData, 'pieMonth', 'legendMonth');
+            }
+
+            // --- REPORTS ---
+
+            function updateDateFilters() {
 
 
-    if (txs.length === 0) return;
+                if (txs.length === 0) return;
 
-    // 1. Extract Unique Years
-    const years = [...new Set(txs.map(t => t.Date.split('-')[0]))].sort((a, b) => b - a);
-    
-    // 2. Extract Unique Months (in -MM- format for the filter logic)
-    const monthMap = {
-        "01": "January", "02": "February", "03": "March", "04": "April",
-        "05": "May", "06": "June", "07": "July", "08": "August",
-        "09": "September", "10": "October", "11": "November", "12": "December"
-    };
-    const months = [...new Set(txs.map(t => t.Date.split('-')[1]))].sort();
+                // 1. Extract Unique Years
+                const years = [...new Set(txs.map(t => t.Date.split('-')[0]))].sort((a, b) => b - a);
 
-    // Populate Year Dropdowns
-    const yearOptions = years.map(y => `<option value="${y}">${y}</option>`).join('');
-    document.getElementById('fYear').innerHTML = `<option value="">All Years</option>` + yearOptions;
-    document.getElementById('aYear').innerHTML = yearOptions; // Analysis usually needs a specific year
+                // 2. Extract Unique Months (in -MM- format for the filter logic)
+                const monthMap = {
+                    "01": "January", "02": "February", "03": "March", "04": "April",
+                    "05": "May", "06": "June", "07": "July", "08": "August",
+                    "09": "September", "10": "October", "11": "November", "12": "December"
+                };
+                const months = [...new Set(txs.map(t => t.Date.split('-')[1]))].sort();
 
-    // Populate Month Dropdowns
-    const fMonthHtml = `<option value="">All Months</option>` + 
-        months.map(m => `<option value="-${m}-">${monthMap[m]}</option>`).join('');
-    
-    const aMonthHtml = `<option value="all">Full Year View</option>` + 
-        months.map(m => `<option value="-${m}-">${monthMap[m]}</option>`).join('');
+                // Populate Year Dropdowns
+                const yearOptions = years.map(y => `<option value="${y}">${y}</option>`).join('');
+                document.getElementById('fYear').innerHTML = `<option value="">All Years</option>` + yearOptions;
+                document.getElementById('aYear').innerHTML = yearOptions; // Analysis usually needs a specific year
 
-    document.getElementById('fMonth').innerHTML = fMonthHtml;
-    document.getElementById('aMonth').innerHTML = aMonthHtml;
-    
-    const today = new Date();
-    const thisYear = today.getFullYear().toString();
-    const thisMonth = "-" + (today.getMonth() + 1).toString().padStart(2, '0') + "-";
+                // Populate Month Dropdowns
+                const fMonthHtml = `<option value="">All Months</option>` +
+                    months.map(m => `<option value="-${m}-">${monthMap[m]}</option>`).join('');
 
-    document.getElementById('fYear').value = thisYear;
-    document.getElementById('fMonth').value = thisMonth;
-    document.getElementById('aYear').value = thisYear;
-    document.getElementById('aMonth').value = thisMonth;
-    
-    
-}
+                const aMonthHtml = `<option value="all">Full Year View</option>` +
+                    months.map(m => `<option value="-${m}-">${monthMap[m]}</option>`).join('');
 
-async function runReport() {
-    // 1. Get UI Inputs
-    const y = document.getElementById('fYear').value;
-    const m = document.getElementById('fMonth').value;
-    const t = document.getElementById('fType').value;
-    const a = document.getElementById('fAcc').value;
-    const k = document.getElementById('fKey').value.toLowerCase();
+                document.getElementById('fMonth').innerHTML = fMonthHtml;
+                document.getElementById('aMonth').innerHTML = aMonthHtml;
 
-    // 2. Fetch Fresh Data from Supabase
-    let { data, error } = await supa.from('Transaction_Records').select('*').order('Date', { ascending: false });
-    if (error) return msg("Error loading data");
+                const today = new Date();
+                const thisYear = today.getFullYear().toString();
+                const thisMonth = "-" + (today.getMonth() + 1).toString().padStart(2, '0') + "-";
 
-    // 3. Filter Logic (Consolidated Keywords)
-    const filteredTxs = data.filter(x => {
-        const matchYear = !y || x.Date.startsWith(y);
-        const matchMonth = !m || x.Date.includes(m);
-        const matchType = !t || x.Type === t;
-        const matchAcc = !a || x.Account === a;
-        const matchKey = !k || 
-                        (x.Remark || "").toLowerCase().includes(k) || 
+                document.getElementById('fYear').value = thisYear;
+                document.getElementById('fMonth').value = thisMonth;
+                document.getElementById('aYear').value = thisYear;
+                document.getElementById('aMonth').value = thisMonth;
+
+
+            }
+
+            async function runReport() {
+                // 1. Get UI Inputs
+                const y = document.getElementById('fYear').value;
+                const m = document.getElementById('fMonth').value;
+                const t = document.getElementById('fType').value;
+                const a = document.getElementById('fAcc').value;
+                const k = document.getElementById('fKey').value.toLowerCase();
+
+                // 2. Fetch Fresh Data from Supabase
+                let { data, error } = await supa.from('Transaction_Records').select('*').order('Date', { ascending: false });
+                if (error) return msg("Error loading data");
+
+                // 3. Filter Logic (Consolidated Keywords)
+                const filteredTxs = data.filter(x => {
+                    const matchYear = !y || x.Date.startsWith(y);
+                    const matchMonth = !m || x.Date.includes(m);
+                    const matchType = !t || x.Type === t;
+                    const matchAcc = !a || x.Account === a;
+                    const matchKey = !k ||
+                        (x.Remark || "").toLowerCase().includes(k) ||
                         (x.Subcategory || "").toLowerCase().includes(k) ||
                         (x.Category || "").toLowerCase().includes(k);
 
-        return matchYear && matchMonth && matchType && matchAcc && matchKey;
-    });
+                    return matchYear && matchMonth && matchType && matchAcc && matchKey;
+                });
 
-    // Sync with Global variable for CSV Download
-    reportData = filteredTxs;
+                // Sync with Global variable for CSV Download
+                reportData = filteredTxs;
 
-    // 4. Calculate Global Totals
-    const inc = filteredTxs.filter(x => x.Type === 'Income').reduce((s, x) => s + (+x.Amount), 0);
-    const exp = filteredTxs.filter(x => x.Type === 'Expense').reduce((s, x) => s + (+x.Amount), 0);
-    const globalNet = inc - exp;
+                // 4. Calculate Global Totals
+                const inc = filteredTxs.filter(x => x.Type === 'Income').reduce((s, x) => s + (+x.Amount), 0);
+                const exp = filteredTxs.filter(x => x.Type === 'Expense').reduce((s, x) => s + (+x.Amount), 0);
+                const globalNet = inc - exp;
 
-    // 5. Monthly Forecast Logic (Visual Fixes Integrated)
-    const now = new Date();
-    const curYear = now.getFullYear().toString();
-    const curMonth = "-" + (now.getMonth() + 1).toString().padStart(2, '0') + "-";
-    const forecastEl = document.getElementById('monthlyForecastValue');
-    
-    if (forecastEl) {
-        forecastEl.classList.remove('pill-neutral', 'pill-positive', 'pill-negative');
-        
-        if (y === curYear && m === curMonth) {
-            const dayOfMonth = now.getDate();
-            const totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-            const projectedNet = (globalNet / dayOfMonth) * totalDaysInMonth;
-            
-            const isPos = projectedNet >= 0;
-            forecastEl.classList.add(isPos ? 'pill-positive' : 'pill-negative');
-            forecastEl.innerText = (isPos ? "+ LKR " : "- LKR ") + Math.abs(Math.round(projectedNet)).toLocaleString();
-        } else {
-            forecastEl.classList.add('pill-neutral');
-            forecastEl.innerText = "N/A (Historical)";
-        }
-    }
+                // 5. Monthly Forecast Logic (Visual Fixes Integrated)
+                const now = new Date();
+                const curYear = now.getFullYear().toString();
+                const curMonth = "-" + (now.getMonth() + 1).toString().padStart(2, '0') + "-";
+                const forecastEl = document.getElementById('monthlyForecastValue');
 
-    // 6. Calculate Per-Account Net Balances
-    const getAccNet = (accName) => {
-        const accTxs = filteredTxs.filter(x => x.Account === accName);
-        const aInc = accTxs.filter(x => x.Type === 'Income').reduce((s, x) => s + (+x.Amount), 0);
-        const aExp = accTxs.filter(x => x.Type === 'Expense').reduce((s, x) => s + (+x.Amount), 0);
-        return aInc - aExp;
-    };
+                if (forecastEl) {
+                    forecastEl.classList.remove('pill-neutral', 'pill-positive', 'pill-negative');
 
-    const mainNet = getAccNet("Main");
-    const saveNet = getAccNet("Saving");
-    const ccNet = getAccNet("Credit Card");
+                    if (y === curYear && m === curMonth) {
+                        const dayOfMonth = now.getDate();
+                        const totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                        const projectedNet = (globalNet / dayOfMonth) * totalDaysInMonth;
 
-    // 7. Update Summary UI (UX Style Fixes)
-    const summaryBox = document.getElementById('reportSummary');
-    if (summaryBox) {
-        summaryBox.style.display = 'block';
-        summaryBox.innerHTML = `
+                        const isPos = projectedNet >= 0;
+                        forecastEl.classList.add(isPos ? 'pill-positive' : 'pill-negative');
+                        forecastEl.innerText = (isPos ? "+ LKR " : "- LKR ") + Math.abs(Math.round(projectedNet)).toLocaleString();
+                    } else {
+                        forecastEl.classList.add('pill-neutral');
+                        forecastEl.innerText = "N/A (Historical)";
+                    }
+                }
+
+                // 6. Calculate Per-Account Net Balances
+                const getAccNet = (accName) => {
+                    const accTxs = filteredTxs.filter(x => x.Account === accName);
+                    const aInc = accTxs.filter(x => x.Type === 'Income').reduce((s, x) => s + (+x.Amount), 0);
+                    const aExp = accTxs.filter(x => x.Type === 'Expense').reduce((s, x) => s + (+x.Amount), 0);
+                    return aInc - aExp;
+                };
+
+                const mainNet = getAccNet("Main");
+                const saveNet = getAccNet("Saving");
+                const ccNet = getAccNet("Credit Card");
+
+                // 7. Update Summary UI (UX Style Fixes)
+                const summaryBox = document.getElementById('reportSummary');
+                if (summaryBox) {
+                    summaryBox.style.display = 'block';
+                    summaryBox.innerHTML = `
             <div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
                 <span style="font-size:12px;">Global: <b style="color:var(--income)">+${inc.toLocaleString()}</b> | <b style="color:var(--expense)">-${exp.toLocaleString()}</b></span>
-                <b id="repNet" style="color:${globalNet >=0 ? 'var(--income)':'var(--expense)'}">Net: ${globalNet.toLocaleString()}</b>
+                <b id="repNet" style="color:${globalNet >= 0 ? 'var(--income)' : 'var(--expense)'}">Net: ${globalNet.toLocaleString()}</b>
             </div>
             <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; text-align:center;">
-                <div><small class="label-sm">Main</small><br><b style="color:${mainNet >=0 ? 'var(--income)':'var(--expense)'}">${mainNet.toLocaleString()}</b></div>
-                <div><small class="label-sm">Saving</small><br><b style="color:${saveNet >=0 ? 'var(--income)':'var(--expense)'}">${saveNet.toLocaleString()}</b></div>
-                <div><small class="label-sm">CC Net</small><br><b style="color:${ccNet >=0 ? 'var(--income)':'var(--expense)'}">${ccNet.toLocaleString()}</b></div>
+                <div><small class="label-sm">Main</small><br><b style="color:${mainNet >= 0 ? 'var(--income)' : 'var(--expense)'}">${mainNet.toLocaleString()}</b></div>
+                <div><small class="label-sm">Saving</small><br><b style="color:${saveNet >= 0 ? 'var(--income)' : 'var(--expense)'}">${saveNet.toLocaleString()}</b></div>
+                <div><small class="label-sm">CC Net</small><br><b style="color:${ccNet >= 0 ? 'var(--income)' : 'var(--expense)'}">${ccNet.toLocaleString()}</b></div>
             </div>
         `;
-    }
+                }
 
-    // 8. Render Transaction List
-    const listBody = document.getElementById('reportList');
-    if (listBody) {
-        listBody.innerHTML = filteredTxs.length ? filteredTxs.map(x => `
+                // 8. Render Transaction List
+                const listBody = document.getElementById('reportList');
+                if (listBody) {
+                    listBody.innerHTML = filteredTxs.length ? filteredTxs.map(x => `
             <div class="list-item" style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); font-size:12px;">
                 <div>
                     <b style="color:var(--text)">${x.Subcategory}</b><br>
                     <small style="color:var(--sub)">${x.Date} • ${x.Account}</small>
                 </div>
                 <div style="text-align:right">
-                    <div style="font-weight:800; color:${x.Type==='Income'?'var(--income)':'var(--expense)'}">
-                        ${x.Type==='Income'?'+':'-'}${parseFloat(x.Amount).toLocaleString()}
+                    <div style="font-weight:800; color:${x.Type === 'Income' ? 'var(--income)' : 'var(--expense)'}">
+                        ${x.Type === 'Income' ? '+' : '-'}${parseFloat(x.Amount).toLocaleString()}
                     </div>
                     <small style="color:var(--sub)">${x.Remark || ''}</small>
                 </div>
             </div>
         `).join('') : "<center style='padding:20px;'><small style='color:var(--sub)'>No records found for these filters.</small></center>";
-    }
-}
+                }
+            }
 
-async function exportCSV() {
-    if (!reportData || reportData.length === 0) {
-        return msg("No data available to export. Run a report first.");
-    }
+            async function exportCSV() {
+                if (!reportData || reportData.length === 0) {
+                    return msg("No data available to export. Run a report first.");
+                }
 
-    const headers = ["Date", "Account", "Type", "Category", "Subcategory", "Amount", "Remark", "Person"];
-    const rows = reportData.map(tx => [
-        tx.Date,
-        `"${tx.Account}"`,
-        tx.Type,
-        `"${tx.Category}"`,
-        `"${tx.Subcategory}"`,
-        tx.Amount,
-        `"${tx.Remark || ''}"`,
-        `"${tx.Person_Name || ''}"`
-    ].join(","));
+                const headers = ["Date", "Account", "Type", "Category", "Subcategory", "Amount", "Remark", "Person"];
+                const rows = reportData.map(tx => [
+                    tx.Date,
+                    `"${tx.Account}"`,
+                    tx.Type,
+                    `"${tx.Category}"`,
+                    `"${tx.Subcategory}"`,
+                    tx.Amount,
+                    `"${tx.Remark || ''}"`,
+                    `"${tx.Person_Name || ''}"`
+                ].join(","));
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Finance_Export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    msg("CSV Downloaded");
-}
+                const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `Finance_Export_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
 
-function renderDashboard() {
-    const list = document.getElementById('recentList');
-    if (!list) return;
+                msg("CSV Downloaded");
+            }
 
-    // Show top 5 recent transactions
-    const recent = txs.slice(0, 5); 
-    
-    if (recent.length === 0) {
-        list.innerHTML = "<center><small style='color:var(--sub)'>No recent activity</small></center>";
-        return;
-    }
+            function renderDashboard() {
+                const list = document.getElementById('recentList');
+                if (!list) return;
 
-    list.innerHTML = recent.map(x => `
+                // Show top 5 recent transactions
+                const recent = txs.slice(0, 5);
+
+                if (recent.length === 0) {
+                    list.innerHTML = "<center><small style='color:var(--sub)'>No recent activity</small></center>";
+                    return;
+                }
+
+                list.innerHTML = recent.map(x => `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border);">
             <div style="flex:1;">
                 <b style="font-size:13px;">${x.Subcategory}</b><br>
@@ -1777,29 +2117,29 @@ function renderDashboard() {
             <button onclick="delTx('${x.id}')" class="btn-del" style="height:28px; width:28px; background:none; border:none; color:var(--expense); cursor:pointer; font-size:18px;">×</button>
         </div>
     `).join('');
-}
+            }
 
-function renderLoanStatus() {
+            function renderLoanStatus() {
 
-    const container = document.getElementById('loanStatusList');
-    // Only display 'Active' status records to keep dashboard clean
-    const activeLoans = loans.filter(l => l.Status === 'Active');
-    
-    if (activeLoans.length === 0) {
-        container.innerHTML = "<small style='color:var(--sub)'>No active debts or Lending.</small>";
-        return;
-    }
+                const container = document.getElementById('loanStatusList');
+                // Only display 'Active' status records to keep dashboard clean
+                const activeLoans = loans.filter(l => l.Status === 'Active');
 
-    container.innerHTML = activeLoans.map(l => {
-        // Logic to determine Color and Label
-        const isLending = l.Type === 'Lending'; // You gave money (Asset)
-        
-        // Lending = Green (Incoming Future), Borrowing = Red (Outgoing Future)
-        const color = isLending ? 'var(--income)' : 'var(--expense)';
-        const label = isLending ? 'TO COLLECT' : 'TO PAY';
-        const arrow = isLending ? 'High' : 'Low'; // Visual cue
+                if (activeLoans.length === 0) {
+                    container.innerHTML = "<small style='color:var(--sub)'>No active debts or Lending.</small>";
+                    return;
+                }
 
-        return `
+                container.innerHTML = activeLoans.map(l => {
+                    // Logic to determine Color and Label
+                    const isLending = l.Type === 'Lending'; // You gave money (Asset)
+
+                    // Lending = Green (Incoming Future), Borrowing = Red (Outgoing Future)
+                    const color = isLending ? 'var(--income)' : 'var(--expense)';
+                    const label = isLending ? 'TO COLLECT' : 'TO PAY';
+                    const arrow = isLending ? 'High' : 'Low'; // Visual cue
+
+                    return `
             <div style="padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <b style="font-size: 14px;">${l.Person_Name}</b><br>
@@ -1817,22 +2157,22 @@ function renderLoanStatus() {
                 </div>
             </div>
         `;
-    }).join('');
-}
+                }).join('');
+            }
 
-function renderPhysicalAssets() {
-    const list = document.getElementById('assetList');
-    
-    // Calculate depreciated total for the header
-    const depTotal = physAssets.reduce((s, a) => s + getDepreciatedValue(a), 0);
-    document.getElementById('totalAssetVal').innerText = "LKR " + depTotal.toLocaleString();
-    
-    list.innerHTML = physAssets.map(a => {
-        const currentVal = getDepreciatedValue(a);
-        const originalVal = parseFloat(a.Value || 0);
-        const healthPct = Math.round((currentVal / originalVal) * 100);
+            function renderPhysicalAssets() {
+                const list = document.getElementById('assetList');
 
-        return `
+                // Calculate depreciated total for the header
+                const depTotal = physAssets.reduce((s, a) => s + getDepreciatedValue(a), 0);
+                document.getElementById('totalAssetVal').innerText = "LKR " + depTotal.toLocaleString();
+
+                list.innerHTML = physAssets.map(a => {
+                    const currentVal = getDepreciatedValue(a);
+                    const originalVal = parseFloat(a.Value || 0);
+                    const healthPct = Math.round((currentVal / originalVal) * 100);
+
+                    return `
             <div class="card" style="margin-bottom:12px; padding:15px; border:1px solid var(--border);">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
@@ -1841,7 +2181,7 @@ function renderPhysicalAssets() {
                         <small style="color:var(--sub)">${a.Specs || 'No Specs'}</small>
                     </div>
                     <div style="text-align:right">
-                        <div style="font-weight:800; color:var(--primary);">LKR ${currentVal.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
+                        <div style="font-weight:800; color:var(--primary);">LKR ${currentVal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                         <small style="color:var(--sub); text-decoration: line-through;">LKR ${originalVal.toLocaleString()}</small>
                     </div>
                 </div>
@@ -1858,120 +2198,121 @@ function renderPhysicalAssets() {
                 <button onclick="delPhysAsset('${a.id}')" class="btn-del" style="margin-top:10px; width:100%; height:32px; border-radius:12px;">Remove Asset</button>
             </div>
         `;
-    }).join('');
-}
+                }).join('');
+            }
 
-async function renderVehicles() {
-    const vSelect = document.getElementById('eVeh');
-    vSelect.innerHTML = '<option>Loading...</option>';
+            async function renderVehicles() {
+                const vSelect = document.getElementById('eVeh');
+                vSelect.innerHTML = '<option>Loading...</option>';
 
-    try {
-        // Fetch from Supabase Vehicles table
-        const { data, error } = await supa
-            .from('Vehicles')
-            .select('Registration, Model');
+                try {
+                    // Fetch from Supabase Vehicles table
+                    const { data, error } = await supa
+                        .from('Vehicles')
+                        .select('Registration, Model');
 
-        if (error) throw error;
+                    if (error) throw error;
 
-        if (data && data.length > 0) {
-            vSelect.innerHTML = data.map(v => 
-                `<option value="${v.Registration}">${v.Registration} (${v.Model})</option>`
-            ).join('');
-        } else {
-            vSelect.innerHTML = '<option>No Vehicles Found</option>';
-        }
-    } catch (err) {
-        console.error("Vehicle load error:", err);
-        // Fallback to your primary profile vehicles if DB fails
-        const fallback = ["BDD 0471 (Hornet)", "BGO 2270 (Dio)", "MK 1081 (Serow)"];
-        vSelect.innerHTML = fallback.map(v => `<option>${v}</option>`).join('');
-    }
-}
+                    if (data && data.length > 0) {
+                        vSelect.innerHTML = data.map(v =>
+                            `<option value="${v.Registration}">${v.Registration} (${v.Model})</option>`
+                        ).join('');
+                    } else {
+                        vSelect.innerHTML = '<option>No Vehicles Found</option>';
+                    }
+                } catch (err) {
+                    console.error("Vehicle load error:", err);
+                    // Fallback to your primary profile vehicles if DB fails
+                    const fallback = ["BDD 0471 (Hornet)", "BGO 2270 (Dio)", "MK 1081 (Serow)"];
+                    vSelect.innerHTML = fallback.map(v => `<option>${v}</option>`).join('');
+                }
+            }
 
-async function updateLenderSuggestions(currentTxType, subcategory) {
-    const list = document.getElementById('lenderSuggestions');
-    if (!list) return;
+            async function updateLenderSuggestions(currentTxType, subcategory) {
+                const list = document.getElementById('lenderSuggestions');
+                if (!list) return;
 
-    // LOGIC: 
-    // If 'Loan Repayment' (Expense) -> show people I 'Borrowed' from.
-    // If 'Debt Collection' (Income) -> show people I 'Lent' to.
-    let targetType = '';
-    if (subcategory === "Loan Repayment") targetType = 'Borrowing';
-    else if (subcategory === "Debt Collection") targetType = 'Lending';
+                // LOGIC: 
+                // If 'Loan Repayment' (Expense) -> show people I 'Borrowed' from.
+                // If 'Debt Collection' (Income) -> show people I 'Lent' to.
+                let targetType = '';
+                if (subcategory === "Loan Repayment") targetType = 'Borrowing';
+                else if (subcategory === "Debt Collection") targetType = 'Lending';
 
-    let query = supa.from('Finance_Management')
-        .select('Person_Name')
-        .eq('Status', 'Active');
-    
-    if (targetType) {
-        query = query.eq('Type', targetType);
-    }
+                let query = supa.from('Finance_Management')
+                    .select('Person_Name')
+                    .eq('Status', 'Active');
 
-    const { data, error } = await query;
+                if (targetType) {
+                    query = query.eq('Type', targetType);
+                }
 
-    if (error) {
-        console.error("Supabase Fetch Error:", error);
-        return;
-    }
+                const { data, error } = await query;
 
-    if (data && data.length > 0) {
-        // Filter out nulls and extract unique names to avoid "undefined"
-        const uniqueNames = [...new Set(
-            data.filter(item => item && item.Person_Name)
-                .map(item => item.Person_Name)
-        )];
+                if (error) {
+                    console.error("Supabase Fetch Error:", error);
+                    return;
+                }
 
-        list.innerHTML = uniqueNames.map(name => `<option value="${name}">`).join('');
-    } else {
-        list.innerHTML = ''; // Reset if no active loans found
-    }
-}
+                if (data && data.length > 0) {
+                    // Filter out nulls and extract unique names to avoid "undefined"
+                    const uniqueNames = [...new Set(
+                        data.filter(item => item && item.Person_Name)
+                            .map(item => item.Person_Name)
+                    )];
 
-// --- UTILS ---
+                    list.innerHTML = uniqueNames.map(name => `<option value="${name}">`).join('');
+                } else {
+                    list.innerHTML = ''; // Reset if no active loans found
+                }
+            }
 
-function clearForms() {
-    const ids = ['eAmt', 'eRem', 'tAmt', 'aName', 'aVal', 'aSpec', 'eLender', 'vReg', 'vMake'];
-    ids.forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
-    document.getElementById('lenderBox').style.display = 'none';
-    const today = new Date().toISOString().split('T')[0];
-    ['eDate', 'tDate'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = today; });
-    loadCats();
-}
+            // --- UTILS ---
 
-function updateLive(accId, pillId) {
-    const selection = document.getElementById(accId).value;
-    const accMap = { "Main": "Main", "Saving": "Saving", "Credit Card": "CC", "Crypto": "Crypto" };
+            function clearForms() {
+                const ids = ['eAmt', 'eRem', 'tAmt', 'aName', 'aVal', 'aSpec', 'eLender', 'vReg', 'vMake'];
+                ids.forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ''; });
+                document.getElementById('lenderBox').style.display = 'none';
+                const today = new Date().toISOString().split('T')[0];
+                ['eDate', 'tDate'].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = today; });
+                loadCats();
+            }
 
-    const targetKey = accMap[selection] || selection;
-    const amount = bal[targetKey] || 0;
-    
-    const pill = document.getElementById(pillId);
-    pill.innerText = "LKR " + amount.toLocaleString();
+            function updateLive(accId, pillId) {
+                const selection = document.getElementById(accId).value;
+                const accMap = { "Main": "Main", "Saving": "Saving", "Credit Card": "CC", "Crypto": "Crypto" };
 
-    // Specific logic for Credit Card utilization warning
-    if (selection === "Credit Card") {
-        const limit = parseFloat(conf.CCL || 0); // Credit Card Limit from setup
-        const usage = (limit - amount) / limit;
-        pill.style.color = usage > 0.8 ? 'var(--expense)' : 'var(--income)';
-    } else {
-        pill.style.color = amount < 0 ? 'var(--expense)' : 'var(--income)';
-    }
-}
+                const targetKey = accMap[selection] || selection;
+                const amount = bal[targetKey] || 0;
 
-function msg(m) {
-    const t = document.getElementById('toast');
-    t.innerText = m; t.style.display = 'block';
-    setTimeout(() => t.style.display = 'none', 2500);
-}
+                const pill = document.getElementById(pillId);
+                pill.innerText = "LKR " + amount.toLocaleString();
 
-function toggleTheme() {
-    const r = document.documentElement;
-    r.setAttribute('data-theme', r.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
-}
+                // Specific logic for Credit Card utilization warning
+                if (selection === "Credit Card") {
+                    const limit = parseFloat(conf.CCL || 0); // Credit Card Limit from setup
+                    const usage = (limit - amount) / limit;
+                    pill.style.color = usage > 0.8 ? 'var(--expense)' : 'var(--income)';
+                } else {
+                    pill.style.color = amount < 0 ? 'var(--expense)' : 'var(--income)';
+                }
+            }
 
-// Initial Boot
-load();
+            function msg(m) {
+                const t = document.getElementById('toast');
+                t.innerText = m; t.style.display = 'block';
+                setTimeout(() => t.style.display = 'none', 2500);
+            }
 
-</script>
+            function toggleTheme() {
+                const r = document.documentElement;
+                r.setAttribute('data-theme', r.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+            }
+
+            // Initial Boot
+            load();
+
+        </script>
 </body>
+
 </html>
