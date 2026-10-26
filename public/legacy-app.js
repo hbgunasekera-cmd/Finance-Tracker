@@ -1174,7 +1174,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                         );
                         const isPos = projectedNet >= 0;
                         forecastEl.classList.add(isPos ? 'pill-positive' : 'pill-negative');
-                        forecastEl.innerText = `${isPos ? '+ ' : '− '}LKR ${formatMoney(Math.abs(projectedNet))}`;
+                        forecastEl.innerText = `LKR ${formatMoney(Math.abs(projectedNet))}`;
                     } else {
                         forecastEl.classList.add('pill-neutral');
                         forecastEl.innerText = 'N/A for selected period';
@@ -1193,12 +1193,12 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                     summaryBox.style.display = 'block';
                     summaryBox.innerHTML = `
             <div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
-                <span style="font-size:12px;">Income: <b style="color:var(--income)">+${formatMoney(inc)}</b> | Expenses: <b style="color:var(--expense)">−${formatMoney(exp)}</b></span>
-                <b id="repNet" style="color:${globalNet >= 0 ? 'var(--income)' : 'var(--expense)'}">Net: ${globalNet < 0 ? '−' : ''}LKR ${formatMoney(Math.abs(globalNet))}</b>
+                <span style="font-size:12px;">Income: <b style="color:var(--income)">${formatMoney(inc)}</b> | Expenses: <b style="color:var(--expense)">${formatMoney(exp)}</b></span>
+                <b id="repNet" style="color:${globalNet >= 0 ? 'var(--income)' : 'var(--expense)'}">Net: LKR ${formatMoney(Math.abs(globalNet))}</b>
             </div>
             <small class="label-sm">Account movement for matching records; includes transfers.</small>
             <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; text-align:center; margin-top:8px;">
-                ${accountMovements.map(([account, movement]) => `<div><small class="label-sm">${escapeHtml(account)}</small><br><b style="color:${movement >= 0 ? 'var(--income)' : 'var(--expense)'}">${movement < 0 ? '−' : '+'}LKR ${formatMoney(Math.abs(movement))}</b></div>`).join('')}
+                ${accountMovements.map(([account, movement]) => `<div><small class="label-sm">${escapeHtml(account)}</small><br><b style="color:${movement >= 0 ? 'var(--income)' : 'var(--expense)'}">LKR ${formatMoney(Math.abs(movement))}</b></div>`).join('')}
             </div>
         `;
                 }
@@ -1212,7 +1212,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 </div>
                 <div style="text-align:right">
                     <div style="font-weight:800; color:${x.Type === 'Income' ? 'var(--income)' : 'var(--expense)'}">
-                        ${x.Type === 'Income' ? '+' : '−'}LKR ${formatMoney(transactionAmount(x))}
+                        LKR ${formatMoney(transactionAmount(x))}
                     </div>
                     <small style="color:var(--sub)">${escapeHtml(x.Remark || '')}</small>
                 </div>
@@ -1280,7 +1280,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
             </div>
             <div style="text-align:right; margin-right:10px;">
                 <div style="font-weight:800; font-size:14px; color:${x.Type === 'Income' ? 'var(--income)' : 'var(--expense)'}">
-                    ${x.Type === 'Income' ? '+' : '−'}LKR ${formatMoney(transactionAmount(x))}
+                    LKR ${formatMoney(transactionAmount(x))}
                 </div>
                 <small style="color:var(--sub); font-size:9px; text-transform:uppercase;">${escapeHtml(x.Category || '')}</small>
             </div>
