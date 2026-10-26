@@ -504,7 +504,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const netWorthEl = document.getElementById('netVal');
                 if (netWorthEl) netWorthEl.innerText = `LKR ${formatMoney(netWorth)}`;
 
-                const liquidityPct = totalLiabilities > 0 ? liquidAssets / totalLiabilities * 100 : NaN;
+                const liquidityPct = totalAssets > 0 ? liquidAssets / totalAssets * 100 : NaN;
                 const physicalAssetPct = totalAssets > 0 ? physicalAssets / totalAssets * 100 : 0;
                 const mainFundsAvailable = roundMoney(mainOpeningThisMonth + mainMonthIncome);
                 const mainRemaining = roundMoney(mainFundsAvailable - mainMonthExpense);

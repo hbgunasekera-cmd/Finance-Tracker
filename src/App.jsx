@@ -91,7 +91,7 @@ export default function App() {
               0%
             </span>
             <small style={{fontSize: "7px"}}>
-              Debt Coverage
+              Liquidity
             </small>
           </div>
         </div>
