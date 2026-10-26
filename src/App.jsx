@@ -75,7 +75,7 @@ export default function App() {
         </small>
         <h1 id={"netVal"} style={{fontSize: "38px", margin: "5px 0", fontWeight: "900", letterSpacing: "-1.5px"}}>
           
-                        0.00
+                        LKR 0
         </h1>
       </div>
       <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: "5px"}}>
@@ -91,7 +91,7 @@ export default function App() {
               0%
             </span>
             <small style={{fontSize: "7px"}}>
-              Liquidity
+              Debt Coverage
             </small>
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function App() {
               0%
             </span>
             <small style={{fontSize: "7px"}}>
-              Assets
+              Physical
             </small>
           </div>
         </div>
@@ -123,7 +123,7 @@ export default function App() {
               0%
             </span>
             <small style={{fontSize: "7px"}}>
-              Available
+              Main Left
             </small>
           </div>
         </div>
@@ -148,7 +148,7 @@ export default function App() {
       </div>
       <div className={"card"} style={{margin: "0", textAlign: "center"}}>
         <label className={"label-sm"}>
-          CC Avail
+          CC Available (LKR)
         </label>
         <div id={"vCC"} style={{fontWeight: "800", color: "var(--expense)"}}>
           0
@@ -156,7 +156,7 @@ export default function App() {
       </div>
       <div className={"card"} style={{margin: "0", textAlign: "center"}}>
         <label className={"label-sm"}>
-          Crypto
+          Crypto Value (LKR)
         </label>
         <div id={"vCry"} style={{fontWeight: "800", color: "var(--income)"}}>
           0
@@ -391,7 +391,7 @@ export default function App() {
         </div>
         <div>
           <label className={"label-sm"}>
-            Est. Value (LKR)
+            Current Estimated Value (LKR)
           </label>
           <input type={"number"} id={"aVal"} className={"amt-input"} placeholder={"0.00"} />
         </div>
@@ -417,7 +417,7 @@ export default function App() {
     </div>
     <div className={"card"} style={{background: "var(--accent)", border: "1px dashed var(--primary)", textAlign: "center"}}>
       <label className={"label-sm"}>
-        Total Physical Asset Value
+        Total Estimated Asset Value
       </label>
       <h2 id={"totalAssetVal"} style={{margin: "5px 0", color: "var(--primary)"}}>
         LKR 0
@@ -429,7 +429,7 @@ export default function App() {
   <section id={"analysis"} className={"page"}>
     <div className={"hero"} style={{background: "linear-gradient(135deg, var(--primary), #1e40af)", padding: "20px"}}>
       <label className={"label-sm"} style={{color: "rgba(255,255,255,0.8)"}}>
-        Financial Efficiency Score
+        Savings Score (0–100%)
       </label>
       <h1 id={"proScore"} style={{fontSize: "48px", margin: "10px 0"}}>
         --
@@ -461,7 +461,7 @@ export default function App() {
       </div>
       <div className={"card"}>
         <label className={"label-sm"}>
-          Daily Velocity
+          Avg. Daily Expenses
         </label>
         <div id={"anBurn"} style={{fontSize: "20px", fontWeight: "800", color: "var(--expense)"}}>
           0
@@ -473,12 +473,12 @@ export default function App() {
     </div>
     <div className={"card"}>
       <label className={"label-sm"} style={{color: "var(--primary)"}}>
-        Daily Available to Spend
+          Daily Balance Allowance
       </label>
       <div style={{display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px"}}>
         <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px dashed var(--border)", paddingBottom: "8px"}}>
           <span style={{fontSize: "12px", fontWeight: "600"}}>
-            1. Total (Main + Saving)
+            1. Main + Saving Balance
           </span>
           <b id={"anDailyTotal"} style={{fontSize: "16px", color: "var(--income)"}}>
             0
@@ -502,7 +502,7 @@ export default function App() {
         </div>
       </div>
       <center>
-        <small id={"daysLeftNote"} style={{display: "block", marginTop: "10px", fontSize: "10px", color: "var(--sub)", textTransform: "uppercase"}}>
+        <small id={"daysLeftNote"} style={{display: "block", marginTop: "10px", fontSize: "10px", color: "var(--sub)", textTransform: "none"}}>
         </small>
       </center>
     </div>
@@ -569,7 +569,7 @@ export default function App() {
       <div style={{marginTop: "10px"}}>
         <small style={{color: "var(--sub)", fontSize: "11px"}}>
           
-                        Estimated month-end balance based on daily velocity
+                        Projected month-end net activity from recorded income and expenses
                     
         </small>
       </div>
@@ -649,48 +649,51 @@ export default function App() {
   <section id={"setup"} className={"page"}>
     <div className={"card"}>
       <h3>
-        Baselines
+        Opening Balances
       </h3>
+      <small style={{display: "block", color: "var(--sub)", marginBottom: "12px", lineHeight: "1.5"}}>
+        Set balances immediately before the earliest saved transaction. Account balances add recorded activity through today; crypto value is holdings × the USDT/LKR rate.
+      </small>
       <div className={"f-grid"}>
         <div>
           <label className={"label-sm"}>
-            Main
+            Main (LKR)
           </label>
           <input type={"number"} id={"cMain"} className={"amt-input"} />
         </div>
         <div>
           <label className={"label-sm"}>
-            Saving
+            Saving (LKR)
           </label>
           <input type={"number"} id={"cSave"} className={"amt-input"} />
         </div>
         <div>
           <label className={"label-sm"}>
-            CC Limit
+            CC Limit (LKR)
           </label>
           <input type={"number"} id={"sCCL"} className={"amt-input"} />
         </div>
         <div>
           <label className={"label-sm"}>
-            CC Available
+            CC Available (LKR)
           </label>
           <input type={"number"} id={"sCCS"} className={"amt-input"} />
         </div>
         <div>
           <label className={"label-sm"}>
-            USDT Rate
+            USDT/LKR Rate
           </label>
           <input type={"number"} id={"cRate"} className={"amt-input"} />
         </div>
         <div>
           <label className={"label-sm"}>
-            Crypto (Qty)
+            Crypto Holdings (USDT)
           </label>
           <input type={"number"} id={"cCry"} className={"amt-input"} />
         </div>
       </div>
       <button className={"btn-p"} data-react-click={true} onClick={(event) => { window.saveConf(); }}>
-        Sync Baselines
+        Save Opening Balances
       </button>
     </div>
     <div className={"card"}>
