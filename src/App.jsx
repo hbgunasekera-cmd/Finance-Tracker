@@ -569,7 +569,7 @@ export default function App() {
       <div style={{marginTop: "10px"}}>
         <small style={{color: "var(--sub)", fontSize: "11px"}}>
           
-                        Projected month-end net activity from recorded income and expenses
+                        Uses last month's month-end salary plus current-month income and expenses; this month's ending salary rolls forward
                     
         </small>
       </div>

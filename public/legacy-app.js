@@ -132,6 +132,25 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 return todayDateKey(date).slice(0, 7);
             }
 
+            function isMonthEndSalary(transaction) {
+                const date = validDateKey(transaction?.Date);
+                if (transaction?.Type !== 'Income' ||
+                    String(transaction?.Category || '').trim().toLowerCase() !== 'salary' || !date) return false;
+
+                const year = Number(date.slice(0, 4));
+                const month = Number(date.slice(5, 7));
+                return Number(date.slice(8, 10)) === daysInMonth(year, month);
+            }
+
+            function spendingPeriodMonth(transaction) {
+                const date = validDateKey(transaction?.Date);
+                if (!date) return null;
+                if (!isMonthEndSalary(transaction)) return date.slice(0, 7);
+
+                const nextMonth = new Date(Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)), 1));
+                return `${nextMonth.getUTCFullYear()}-${String(nextMonth.getUTCMonth() + 1).padStart(2, '0')}`;
+            }
+
             function transactionAmount(transaction) {
                 // Amount is a magnitude; Type determines whether it adds to or subtracts from an account.
                 return Math.abs(roundMoney(transaction?.Amount));
@@ -224,6 +243,21 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 return records.filter(transaction => {
                     const date = validDateKey(transaction.Date);
                     return date && date.startsWith(year) && (!month || date.slice(5, 7) === month) &&
+                        (includeFuture || date <= today);
+                });
+            }
+
+            function transactionsForSpendingPeriod(records, yearValue, monthValue, includeFuture = false) {
+                const year = String(yearValue || '');
+                const month = monthValue && monthValue !== 'all'
+                    ? String(monthValue).replace(/\D/g, '').padStart(2, '0')
+                    : null;
+                const today = todayDateKey();
+                return records.filter(transaction => {
+                    const date = validDateKey(transaction.Date);
+                    const spendingMonth = spendingPeriodMonth(transaction);
+                    return date && spendingMonth && spendingMonth.startsWith(year) &&
+                        (!month || spendingMonth.slice(5, 7) === month) &&
                         (includeFuture || date <= today);
                 });
             }
@@ -469,8 +503,13 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                         if (date.slice(0, 7) < thisMonth) {
                             mainOpeningThisMonth = roundMoney(mainOpeningThisMonth + delta);
                         } else if (date.slice(0, 7) === thisMonth) {
-                            if (delta > 0) mainMonthIncome = roundMoney(mainMonthIncome + delta);
-                            else mainMonthExpense = roundMoney(mainMonthExpense - delta);
+                            if (delta > 0) {
+                                if (!isMonthEndSalary(transaction)) {
+                                    mainMonthIncome = roundMoney(mainMonthIncome + delta);
+                                }
+                            } else if (delta < 0) {
+                                mainMonthExpense = roundMoney(mainMonthExpense - delta);
+                            }
                         }
                     }
                 });
@@ -1038,13 +1077,14 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const year = document.getElementById('aYear').value;
                 const month = document.getElementById('aMonth').value;
                 const pData = transactionsForPeriod(txs, year, month);
+                const spendingPeriodData = transactionsForSpendingPeriod(txs, year, month);
                 const today = todayDateKey();
                 const currentMonth = currentMonthKey();
                 const currentMonthData = txs.filter(t => {
                     const date = validDateKey(t.Date);
                     return date && date.slice(0, 7) === currentMonth && date <= today;
                 });
-                const { income, expense } = getIncomeExpense(pData);
+                const { income, expense } = getIncomeExpense(spendingPeriodData);
                 const saveRate = income > 0 ? ((income - expense) / income) * 100 : null;
                 const elapsedDays = elapsedDaysInPeriod(year, month);
                 const saveRateEl = document.getElementById('anSaveRate');
@@ -1079,26 +1119,35 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
 
                 const topCategory = categories[0]?.[0];
                 const performanceNote = saveRate === null
-                    ? 'Record income to calculate a savings rate.'
-                    : saveRate < 0 ? 'Recorded operating expenses exceed income.'
-                        : saveRate < 20 ? 'Less than 20% of recorded income was saved.'
-                            : 'At least 20% of recorded income was saved.';
+                    ? 'Record spend-cycle income to calculate a savings rate.'
+                    : saveRate < 0 ? 'Recorded operating expenses exceed spend-cycle income.'
+                        : saveRate < 20 ? 'Less than 20% of spend-cycle income remains after expenses.'
+                            : 'At least 20% of spend-cycle income remains after expenses.';
                 document.getElementById('anInsights').innerHTML = `
-        Operating income <b>LKR ${formatMoney(income)}</b> · operating expenses <b>LKR ${formatMoney(expense)}</b>.
+        Spend-cycle income <b>LKR ${formatMoney(income)}</b> · operating expenses <b>LKR ${formatMoney(expense)}</b>.
         ${topCategory ? `Largest expense category: <b>${escapeHtml(topCategory)}</b>.` : 'No operating expense category recorded.'}
-        ${escapeHtml(performanceNote)} Savings rate is (income − expenses) ÷ income. Transfers and loan principal are excluded; record loan interest separately as an expense.
+        ${escapeHtml(performanceNote)} Savings rate is (spend-cycle income − expenses) ÷ spend-cycle income. Salary received on the final day of a month is counted in the following month's spend cycle. Transfers and loan principal are excluded; record loan interest separately as an expense.
     `;
 
                 const dateParts = today.split('-').map(Number);
                 const daysRemaining = daysInMonth(dateParts[0], dateParts[1]) - dateParts[2] + 1;
                 const formatDaily = value => `LKR ${formatMoney(value)}`;
-                const dailyTotal = (toNumber(bal.Main) + toNumber(bal.Saving)) / daysRemaining;
+                const monthEndSalaryByAccount = txs.reduce((totals, transaction) => {
+                    if (validDateKey(transaction.Date) !== today || !isMonthEndSalary(transaction)) return totals;
+                    if (transaction.Account === 'Main' || transaction.Account === 'Saving') {
+                        totals[transaction.Account] = roundMoney(totals[transaction.Account] + transactionAmount(transaction));
+                    }
+                    return totals;
+                }, { Main: 0, Saving: 0 });
+                const dailyMainBalance = toNumber(bal.Main) - monthEndSalaryByAccount.Main;
+                const dailySavingBalance = toNumber(bal.Saving) - monthEndSalaryByAccount.Saving;
+                const dailyTotal = (dailyMainBalance + dailySavingBalance) / daysRemaining;
                 const dailyTotalEl = document.getElementById('anDailyTotal');
                 dailyTotalEl.innerText = formatDaily(dailyTotal);
                 dailyTotalEl.style.color = dailyTotal >= 0 ? 'var(--income)' : 'var(--expense)';
-                document.getElementById('anDailyMain').innerText = formatDaily(toNumber(bal.Main) / daysRemaining);
-                document.getElementById('anDailySave').innerText = formatDaily(toNumber(bal.Saving) / daysRemaining);
-                document.getElementById('daysLeftNote').innerText = `Guide: Main + Saving balances ÷ ${daysRemaining} remaining calendar day${daysRemaining === 1 ? '' : 's'}, including today. Upcoming bills are not deducted.`;
+                document.getElementById('anDailyMain').innerText = formatDaily(dailyMainBalance / daysRemaining);
+                document.getElementById('anDailySave').innerText = formatDaily(dailySavingBalance / daysRemaining);
+                document.getElementById('daysLeftNote').innerText = `Guide: Main + Saving balances available for this spend cycle ÷ ${daysRemaining} remaining calendar day${daysRemaining === 1 ? '' : 's'}, including today. Month-end salary is reserved for next month; upcoming bills are not deducted.`;
 
                 renderSubPie(txs.filter(t => {
                     const date = validDateKey(t.Date);
@@ -1160,18 +1209,21 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                     forecastEl.classList.remove('pill-neutral', 'pill-positive', 'pill-negative');
                     const today = todayDateKey();
                     const monthKey = m ? m.slice(1, 3) : '';
-                    const forecastRecords = txs.filter(transaction => {
-                        const date = validDateKey(transaction.Date);
-                        return date && date.slice(0, 7) === currentMonthKey() && date <= today &&
-                            matchesAccount(transaction) && !isNonOperatingFlow(transaction);
-                    });
+                    const forecastRecords = transactionsForSpendingPeriod(
+                        txs, today.slice(0, 4), today.slice(5, 7)
+                    ).filter(transaction => matchesAccount(transaction));
                     const isCurrentMonthSelected = (!y || y === today.slice(0, 4)) && monthKey === today.slice(5, 7);
                     if (isCurrentMonthSelected) {
                         const { income, expense } = getIncomeExpense(forecastRecords);
+                        const priorMonthSalary = roundMoney(forecastRecords
+                            .filter(isMonthEndSalary)
+                            .reduce((sum, transaction) => sum + transactionAmount(transaction), 0));
+                        const currentMonthIncome = roundMoney(income - priorMonthSalary);
                         const elapsed = Number(today.slice(8, 10));
-                        const projectedNet = ((income - expense) / elapsed) * daysInMonth(
-                            Number(today.slice(0, 4)), Number(today.slice(5, 7))
-                        );
+                        const projectedNet = priorMonthSalary +
+                            ((currentMonthIncome - expense) / elapsed) * daysInMonth(
+                                Number(today.slice(0, 4)), Number(today.slice(5, 7))
+                            );
                         const isPos = projectedNet >= 0;
                         forecastEl.classList.add(isPos ? 'pill-positive' : 'pill-negative');
                         forecastEl.innerText = `LKR ${formatMoney(Math.abs(projectedNet))}`;
