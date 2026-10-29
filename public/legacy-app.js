@@ -43,11 +43,12 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                         "Uber Commission",
                         "PickMe Commission",
                         "Freelance Platform Fees",
-                        "Agency Fees"
+                        "Agency Fees",
+                        "Normal Postal Service", 
+                        "Courier & Express",
+                        "Registered Mail Service"
                     ],
                     "Telecommunication": ["Mobile Reload", "Internet/Data Bundle", "Cable TV"],
-                    "Postage & Postal Services": ["Letter Post Charges"],
-                    "Stationery & Office Supplies": ["Envelopes"],
                     "Trips & Travel": [
                         "Group Trip Pool",
                         "Site Entry Tickets",
@@ -79,7 +80,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                     ],
                     "Healthcare": ["Medicine", "Doctor Visit", "Supplement", "Hospital Bill"],
                     "Fashion & Grooming": ["Wearable", "Cosmetics", "Grooming/Salon", "Top Wear", "Bottom Wear", "Underwear", "Footwear"],
-                    "Material & Chemicals": ["Tools", "Accessories", "Gadgets", "Chemicals"],
+                    "Material & Chemicals": ["Tools", "Accessories", "Stationery & Office Supplies", "Gadgets", "Chemicals"],
                     "Education": ["Courses", "Books", "Certifications"],
                     "Debt & Finance": ["Loan Repayment", "Loan Interest", "Lending", "Pawn Interest", "Bank Charges", "Credit Card", "Gifts"]
                 }
