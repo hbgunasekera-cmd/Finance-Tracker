@@ -928,10 +928,18 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 await load();
             }
 
+            function isCurrentMonthTransaction(transaction) {
+                const date = validDateKey(transaction?.Date);
+                return Boolean(date && date.slice(0, 7) === currentMonthKey());
+            }
+
             async function delTx(id) {
                 const { data: transaction, error: fetchError } = await supa.from('Transaction_Records')
                     .select('*').eq('id', id).maybeSingle();
                 if (fetchError || !transaction) return msg('Could not load the transaction to delete');
+                if (!isCurrentMonthTransaction(transaction)) {
+                    return msg('Only transactions from the current month can be deleted');
+                }
 
                 if (isTransfer(transaction)) {
                     const { data: candidates, error } = await fetchAllRows('Transaction_Records', query => query
@@ -1230,8 +1238,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
 
                 const monthOptions = MONTH_NAMES.map((name, index) => {
                     const month = String(index + 1).padStart(2, '0');
-                    const count = monthCounts.get(month) || 0;
-                    return `<option value="-${month}-">${name}${count ? ` (${count})` : ''}</option>`;
+                    return `<option value="-${month}-">${name}</option>`;
                 }).join('');
                 monthSelect.innerHTML = `<option value="">All Months</option>${monthOptions}`;
 
@@ -1350,7 +1357,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                         </div>
                         <small style="color:var(--sub)">${escapeHtml(x.Remark || '')}</small>
                     </div>
-                    <button onclick="delTx('${escapeHtml(x.id)}')" class="btn-del" aria-label="Delete transaction" title="Delete transaction">×</button>
+                    ${isCurrentMonthTransaction(x) ? `<button onclick="delTx('${escapeHtml(x.id)}')" class="btn-del" aria-label="Delete transaction" title="Delete transaction">×</button>` : ''}
                 </div>
             </div>
         `).join('') : "<center style='padding:20px;'><small style='color:var(--sub)'>No records found for these filters.</small></center>";
