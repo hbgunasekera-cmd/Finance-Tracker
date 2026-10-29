@@ -605,7 +605,7 @@ export default function App() {
         Filters
       </label>
       <div className={"f-grid"} style={{gap: "8px"}}>
-        <select id={"fYear"} onChange={(event) => { window.runReport(); }}>
+        <select id={"fYear"} onChange={(event) => { window.updateReportMonthOptions(true); window.runReport(); }}>
         </select>
         <select id={"fMonth"} onChange={(event) => { window.runReport(); }}>
         </select>

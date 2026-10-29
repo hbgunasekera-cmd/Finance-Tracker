@@ -782,7 +782,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const vehicle = document.getElementById('eVeh').value.trim();
                 const person = document.getElementById('eLender').value.trim();
 
-                if (!date || date > todayDateKey()) return msg('Enter a valid transaction date no later than today');
+                if (!date) return msg('Enter a valid transaction date');
                 if (!ACCOUNT_KEYS[account]) return msg('Select a valid account');
                 if (!['Income', 'Expense'].includes(type) || !CATS[type]?.[category]?.includes(subcategory)) {
                     return msg('Select a valid transaction type and category');
@@ -1035,7 +1035,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const amount = roundMoney(rawAmount);
                 const date = validDateKey(document.getElementById('tDate').value);
 
-                if (!date || date > todayDateKey() || !ACCOUNT_KEYS[from] || !ACCOUNT_KEYS[to] || from === to ||
+                if (!date || !ACCOUNT_KEYS[from] || !ACCOUNT_KEYS[to] || from === to ||
                     rawAmount === '' || !Number.isFinite(Number(rawAmount)) || amount <= 0) {
                     return msg('Enter a valid date, amount, and two different accounts');
                 }
@@ -1213,25 +1213,52 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
 
             // --- REPORTS ---
 
+            function updateReportMonthOptions(selectLatestAvailable = false) {
+                const yearSelect = document.getElementById('fYear');
+                const monthSelect = document.getElementById('fMonth');
+                if (!yearSelect || !monthSelect) return;
+
+                const selectedYear = yearSelect.value;
+                const selectedMonth = monthSelect.value;
+                const monthCounts = new Map();
+                txs.forEach(transaction => {
+                    const date = validDateKey(transaction.Date);
+                    if (!date || (selectedYear && !date.startsWith(selectedYear))) return;
+                    const month = date.slice(5, 7);
+                    monthCounts.set(month, (monthCounts.get(month) || 0) + 1);
+                });
+
+                const monthOptions = MONTH_NAMES.map((name, index) => {
+                    const month = String(index + 1).padStart(2, '0');
+                    const count = monthCounts.get(month) || 0;
+                    return `<option value="-${month}-">${name}${count ? ` (${count})` : ''}</option>`;
+                }).join('');
+                monthSelect.innerHTML = `<option value="">All Months</option>${monthOptions}`;
+
+                const selectedMonthNumber = selectedMonth.slice(1, 3);
+                const latestAvailableMonth = [...monthCounts.keys()].sort((left, right) => right.localeCompare(left))[0];
+                const shouldSelectLatest = selectLatestAvailable && selectedYear && latestAvailableMonth &&
+                    (!selectedMonthNumber || !monthCounts.has(selectedMonthNumber));
+                monthSelect.value = shouldSelectLatest ? `-${latestAvailableMonth}-` : selectedMonth;
+            }
+
             function updateDateFilters() {
                 const thisYear = todayDateKey().slice(0, 4);
-                const today = todayDateKey();
                 const years = [...new Set([
                     thisYear,
-                    ...txs.map(t => validDateKey(t.Date)).filter(date => date && date <= today).map(date => date.slice(0, 4))
+                    ...txs.map(t => validDateKey(t.Date)).filter(Boolean).map(date => date.slice(0, 4))
                 ])].sort((a, b) => Number(b) - Number(a));
                 const yearOptions = years.map(year => `<option value="${year}">${year}</option>`).join('');
                 document.getElementById('fYear').innerHTML = `<option value="">All Years</option>${yearOptions}`;
                 document.getElementById('aYear').innerHTML = yearOptions;
-                const monthOptions = MONTH_NAMES.map((name, index) => {
+                document.getElementById('aMonth').innerHTML = `<option value="all">Full Year View</option>${MONTH_NAMES.map((name, index) => {
                     const month = String(index + 1).padStart(2, '0');
                     return `<option value="-${month}-">${name}</option>`;
-                }).join('');
-                document.getElementById('fMonth').innerHTML = `<option value="">All Months</option>${monthOptions}`;
-                document.getElementById('aMonth').innerHTML = `<option value="all">Full Year View</option>${monthOptions}`;
+                }).join('')}`;
 
                 const thisMonth = `-${todayDateKey().slice(5, 7)}-`;
                 document.getElementById('fYear').value = thisYear;
+                updateReportMonthOptions();
                 document.getElementById('fMonth').value = thisMonth;
                 document.getElementById('aYear').value = thisYear;
                 document.getElementById('aMonth').value = thisMonth;
@@ -1245,7 +1272,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const k = document.getElementById('fKey').value.trim().toLocaleLowerCase();
                 const matchesDate = transaction => {
                     const date = validDateKey(transaction.Date);
-                    return date && date <= todayDateKey() && (!y || date.startsWith(y)) &&
+                    return date && (!y || date.startsWith(y)) &&
                         (!m || date.slice(5, 7) === m.slice(1, 3));
                 };
                 const matchesAccount = transaction => !a || transaction.Account === a;
