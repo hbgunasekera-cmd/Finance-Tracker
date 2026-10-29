@@ -2,6 +2,19 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
 
             let reportData = [];
             let txs = [], conf = {}, vehs = [], bal = {}, filteredTxs = [], physAssets = [], loans = [];
+            const locallyInsertedTransactions = new Map();
+            const locallyInsertedOrder = new Map();
+            let localInsertSequence = 0;
+
+            function sortTransactions(records) {
+                return records.slice().sort((left, right) => {
+                    const dateOrder = String(validDateKey(right.Date) || '')
+                        .localeCompare(String(validDateKey(left.Date) || ''));
+                    if (dateOrder) return dateOrder;
+                    return (locallyInsertedOrder.get(String(right.id)) || 0) -
+                        (locallyInsertedOrder.get(String(left.id)) || 0);
+                });
+            }
 
             const CATS = {
                 Income: {
@@ -444,17 +457,28 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                         fetchAllRows('Finance_Management', query => query.eq('Status', 'Active').order('id', { ascending: true }))
                     ]);
 
-                    if (resConf.error) throw resConf.error;
-                    const failed = [resTxs, resVehs, resAssets, resLoans].find(result => result.error);
-                    if (failed) throw failed.error;
+                    if (resTxs.error) throw resTxs.error;
 
-                    conf = resConf.data || {};
-                    txs = (resTxs.data || []).slice().sort((a, b) =>
-                        String(validDateKey(b.Date) || '').localeCompare(String(validDateKey(a.Date) || ''))
-                    );
-                    vehs = resVehs.data || [];
-                    physAssets = resAssets.data || [];
-                    loans = resLoans.data || [];
+                    if (resConf.error) {
+                        console.error('Config load failed:', resConf.error);
+                    } else {
+                        conf = resConf.data || {};
+                    }
+                    const loadedTransactions = resTxs.data || [];
+                    const loadedTransactionIds = new Set(loadedTransactions.map(transaction => String(transaction.id)));
+                    for (const [id, transaction] of locallyInsertedTransactions) {
+                        if (!loadedTransactionIds.has(id)) {
+                            loadedTransactions.push(transaction);
+                        }
+                    }
+                    txs = sortTransactions(loadedTransactions);
+
+                    if (resVehs.error) console.error('Vehicle load failed:', resVehs.error);
+                    else vehs = resVehs.data || [];
+                    if (resAssets.error) console.error('Physical asset load failed:', resAssets.error);
+                    else physAssets = resAssets.data || [];
+                    if (resLoans.error) console.error('Loan load failed:', resLoans.error);
+                    else loans = resLoans.data || [];
 
                     syncConfigForm();
                     updateDateFilters();
@@ -830,6 +854,15 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                         return msg('Loan balance could not be updated; transaction was rolled back');
                     }
                 }
+
+                const savedTransaction = { ...transaction, id: insertedTransactions.id };
+                locallyInsertedTransactions.set(String(savedTransaction.id), savedTransaction);
+                locallyInsertedOrder.set(String(savedTransaction.id), ++localInsertSequence);
+                txs = sortTransactions([savedTransaction, ...txs.filter(item => String(item.id) !== String(savedTransaction.id))]);
+                calculate();
+                renderDashboard();
+                if (document.getElementById('analysis')?.classList.contains('active')) runProAnalysis();
+                if (document.getElementById('stats')?.classList.contains('active')) runReport();
 
                 msg('Entry saved successfully');
                 clearForms();
