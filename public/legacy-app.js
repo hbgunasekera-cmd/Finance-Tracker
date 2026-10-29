@@ -1351,22 +1351,18 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const list = document.getElementById('recentList');
                 if (!list) return;
 
-                // Show every transaction on the latest date plus the five preceding records.
+                // Keep every transaction from today visible, then include five earlier records.
                 const today = todayDateKey();
                 const completedTransactions = sortTransactions(txs.filter(transaction => {
                     const date = validDateKey(transaction.Date);
                     return date && date <= today;
                 }));
-                const latestDate = completedTransactions.length
-                    ? validDateKey(completedTransactions[0].Date)
-                    : null;
-                const latestDateTransactions = latestDate
-                    ? completedTransactions.filter(transaction => validDateKey(transaction.Date) === latestDate)
-                    : [];
+                const todaysTransactions = completedTransactions
+                    .filter(transaction => validDateKey(transaction.Date) === today);
                 const precedingTransactions = completedTransactions
-                    .filter(transaction => validDateKey(transaction.Date) !== latestDate)
+                    .filter(transaction => validDateKey(transaction.Date) < today)
                     .slice(0, 5);
-                const recent = [...latestDateTransactions, ...precedingTransactions];
+                const recent = [...todaysTransactions, ...precedingTransactions];
 
                 if (recent.length === 0) {
                     list.innerHTML = "<center><small style='color:var(--sub)'>No recent activity</small></center>";
