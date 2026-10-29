@@ -13,7 +13,7 @@ export default function App() {
     if (document.querySelector('script[data-finance-legacy]')) return;
 
     const script = document.createElement('script');
-    script.src = '/legacy-app.js';
+    script.src = `/legacy-app.js?v=${Date.now()}`;
     script.dataset.financeLegacy = 'true';
     document.body.appendChild(script);
   }, []);

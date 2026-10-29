@@ -667,6 +667,9 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
 
                     if (document.getElementById('fYear')) document.getElementById('fYear').value = curYear;
                     if (document.getElementById('fMonth')) document.getElementById('fMonth').value = curMonth;
+                    if (document.getElementById('fType')) document.getElementById('fType').value = '';
+                    if (document.getElementById('fAcc')) document.getElementById('fAcc').value = '';
+                    if (document.getElementById('fKey')) document.getElementById('fKey').value = '';
 
                     runReport();
                 }
@@ -1348,12 +1351,22 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const list = document.getElementById('recentList');
                 if (!list) return;
 
-                // Show the five latest completed transactions, excluding future-dated legacy records.
+                // Show every transaction on the latest date plus the five preceding records.
                 const today = todayDateKey();
-                const recent = txs.filter(transaction => {
+                const completedTransactions = sortTransactions(txs.filter(transaction => {
                     const date = validDateKey(transaction.Date);
                     return date && date <= today;
-                }).slice(0, 5);
+                }));
+                const latestDate = completedTransactions.length
+                    ? validDateKey(completedTransactions[0].Date)
+                    : null;
+                const latestDateTransactions = latestDate
+                    ? completedTransactions.filter(transaction => validDateKey(transaction.Date) === latestDate)
+                    : [];
+                const precedingTransactions = completedTransactions
+                    .filter(transaction => validDateKey(transaction.Date) !== latestDate)
+                    .slice(0, 5);
+                const recent = [...latestDateTransactions, ...precedingTransactions];
 
                 if (recent.length === 0) {
                     list.innerHTML = "<center><small style='color:var(--sub)'>No recent activity</small></center>";
