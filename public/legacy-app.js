@@ -455,22 +455,31 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
 
             async function load() {
                 try {
-                    const [resConf, resTxs, resVehs, resAssets, resLoans] = await Promise.all([
+                    const today = todayDateKey();
+                    const [resConf, resTxs, resTodayTxs, resVehs, resAssets, resLoans] = await Promise.all([
                         supa.from('Config').select('*').maybeSingle(),
                         fetchAllRows('Transaction_Records', query => query.order('Date', { ascending: false }).order('id', { ascending: true })),
+                        // Fetch today's rows independently so offset pagination on the full ledger
+                        // cannot leave a same-day transaction out of the dashboard or current report.
+                        fetchAllRows('Transaction_Records', query => query.eq('Date', today).order('id', { ascending: true })),
                         fetchAllRows('Vehicles'),
                         fetchAllRows('Physical_Assets'),
                         fetchAllRows('Finance_Management', query => query.eq('Status', 'Active').order('id', { ascending: true }))
                     ]);
 
                     if (resTxs.error) throw resTxs.error;
+                    if (resTodayTxs.error) console.error('Today transaction refresh failed:', resTodayTxs.error);
 
                     if (resConf.error) {
                         console.error('Config load failed:', resConf.error);
                     } else {
                         conf = resConf.data || {};
                     }
-                    const loadedTransactions = resTxs.data || [];
+                    const transactionsById = new Map();
+                    for (const transaction of [...(resTxs.data || []), ...(resTodayTxs.data || [])]) {
+                        transactionsById.set(String(transaction.id), transaction);
+                    }
+                    const loadedTransactions = [...transactionsById.values()];
                     const loadedTransactionIds = new Set(loadedTransactions.map(transaction => String(transaction.id)));
                     for (const [id, transaction] of locallyInsertedTransactions) {
                         if (!loadedTransactionIds.has(id)) {
