@@ -46,6 +46,8 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                         "Agency Fees"
                     ],
                     "Telecommunication": ["Mobile Reload", "Internet/Data Bundle", "Cable TV"],
+                    "Postage & Postal Services": ["Letter Post Charges"],
+                    "Stationery & Office Supplies": ["Envelopes"],
                     "Trips & Travel": [
                         "Group Trip Pool",
                         "Site Entry Tickets",
