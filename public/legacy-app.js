@@ -140,8 +140,14 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
             }
 
             function todayDateKey(date = new Date()) {
-                const pad = value => String(value).padStart(2, '0');
-                return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+                const parts = new Intl.DateTimeFormat('en', {
+                    timeZone: 'Asia/Colombo',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).formatToParts(date);
+                const part = type => parts.find(item => item.type === type)?.value || '';
+                return `${part('year')}-${part('month')}-${part('day')}`;
             }
 
             function currentMonthKey(date = new Date()) {
@@ -1351,21 +1357,14 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const list = document.getElementById('recentList');
                 if (!list) return;
 
-                // Keep every transaction from today visible, then include five earlier records.
+                // This section is today's activity only; do not mix in earlier dates.
                 const today = todayDateKey();
-                const completedTransactions = sortTransactions(txs.filter(transaction => {
-                    const date = validDateKey(transaction.Date);
-                    return date && date <= today;
-                }));
-                const todaysTransactions = completedTransactions
-                    .filter(transaction => validDateKey(transaction.Date) === today);
-                const precedingTransactions = completedTransactions
-                    .filter(transaction => validDateKey(transaction.Date) < today)
-                    .slice(0, 5);
-                const recent = [...todaysTransactions, ...precedingTransactions];
+                const recent = sortTransactions(txs.filter(transaction =>
+                    validDateKey(transaction.Date) === today
+                ));
 
                 if (recent.length === 0) {
-                    list.innerHTML = "<center><small style='color:var(--sub)'>No recent activity</small></center>";
+                    list.innerHTML = "<center><small style='color:var(--sub)'>No transactions recorded today</small></center>";
                     return;
                 }
 
