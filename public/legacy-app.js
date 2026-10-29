@@ -1311,16 +1311,19 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const listBody = document.getElementById('reportList');
                 if (listBody) {
                     listBody.innerHTML = reportData.length ? reportData.map(x => `
-            <div class="list-item" style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); font-size:12px;">
-                <div>
+            <div class="list-item" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); font-size:12px;">
+                <div style="flex:1; min-width:0;">
                     <b style="color:var(--text)">${escapeHtml(x.Subcategory || x.Category || 'Transaction')}</b><br>
                     <small style="color:var(--sub)">${escapeHtml(validDateKey(x.Date) || 'Invalid date')} • ${escapeHtml(x.Account || 'Unknown account')}</small>
                 </div>
-                <div style="text-align:right">
-                    <div style="font-weight:800; color:${x.Type === 'Income' ? 'var(--income)' : 'var(--expense)'}">
-                        LKR ${formatMoney(transactionAmount(x))}
+                <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                    <div style="text-align:right">
+                        <div style="font-weight:800; color:${x.Type === 'Income' ? 'var(--income)' : 'var(--expense)'}">
+                            LKR ${formatMoney(transactionAmount(x))}
+                        </div>
+                        <small style="color:var(--sub)">${escapeHtml(x.Remark || '')}</small>
                     </div>
-                    <small style="color:var(--sub)">${escapeHtml(x.Remark || '')}</small>
+                    <button onclick="delTx('${escapeHtml(x.id)}')" class="btn-del" aria-label="Delete transaction" title="Delete transaction">×</button>
                 </div>
             </div>
         `).join('') : "<center style='padding:20px;'><small style='color:var(--sub)'>No records found for these filters.</small></center>";
@@ -1389,7 +1392,6 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 </div>
                 <small style="color:var(--sub); font-size:9px; text-transform:uppercase;">${escapeHtml(x.Category || '')}</small>
             </div>
-            <button onclick="delTx('${escapeHtml(x.id)}')" class="btn-del" style="height:28px; width:28px; background:none; border:none; color:var(--expense); cursor:pointer; font-size:18px;">×</button>
         </div>
     `).join('');
             }
