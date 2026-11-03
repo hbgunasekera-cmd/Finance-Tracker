@@ -178,6 +178,33 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 return Math.abs(roundMoney(transaction?.Amount));
             }
 
+            function accountBalanceDelta(transaction) {
+                const amount = transactionAmount(transaction);
+                if (transaction?.Type === 'Income') return amount;
+                if (transaction?.Type === 'Expense') return -amount;
+                return 0;
+            }
+
+            function configuredAccountBalances() {
+                return {
+                    Main: roundMoney(conf.Main_Balance),
+                    Saving: roundMoney(conf.Saving_Balance),
+                    CC: roundMoney(conf.CCS),
+                    Crypto: roundMoney(toNumber(conf.Crypto_Balance) * toNumber(conf.Rate))
+                };
+            }
+
+            function accountBalancesAtDate(asOfDate = todayDateKey(), exclusive = false) {
+                const balances = configuredAccountBalances();
+                txs.forEach(transaction => {
+                    const date = validDateKey(transaction.Date);
+                    const accountKey = ACCOUNT_KEYS[transaction.Account];
+                    if (!date || !accountKey || (exclusive ? date >= asOfDate : date > asOfDate)) return;
+                    balances[accountKey] = roundMoney(balances[accountKey] + accountBalanceDelta(transaction));
+                });
+                return balances;
+            }
+
             function isTransfer(transaction) {
                 const category = String(transaction?.Category || '').trim().toLowerCase();
                 const subcategory = String(transaction?.Subcategory || '').trim().toLowerCase();
@@ -513,46 +540,23 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
             }
 
             function calculate() {
-                const cryptoQuantity = toNumber(conf.Crypto_Balance);
-                const exchangeRate = toNumber(conf.Rate);
-                bal = {
-                    Main: roundMoney(conf.Main_Balance),
-                    Saving: roundMoney(conf.Saving_Balance),
-                    CC: roundMoney(conf.CCS),
-                    Crypto: roundMoney(cryptoQuantity * exchangeRate)
-                };
-
                 const today = todayDateKey();
                 const thisMonth = today.slice(0, 7);
-                let mainOpeningThisMonth = bal.Main;
+                bal = accountBalancesAtDate(today);
+                const monthStart = `${thisMonth}-01`;
+                const mainOpeningThisMonth = accountBalancesAtDate(monthStart, true).Main;
                 let mainMonthIncome = 0;
                 let mainMonthExpense = 0;
 
                 txs.forEach(transaction => {
                     const date = validDateKey(transaction.Date);
-                    const amount = transactionAmount(transaction);
-                    const accountKey = ACCOUNT_KEYS[transaction.Account];
-                    if (!date || date > today || !accountKey || amount <= 0) return;
+                    if (!date || date < monthStart || date > today || transaction.Account !== 'Main') return;
 
-                    let delta = 0;
-                    if (transaction.Type === 'Income') delta = amount;
-                    else if (transaction.Type === 'Expense') delta = -amount;
-                    else return;
-
-                    bal[accountKey] = roundMoney(bal[accountKey] + delta);
-
-                    if (transaction.Account === 'Main') {
-                        if (date.slice(0, 7) < thisMonth) {
-                            mainOpeningThisMonth = roundMoney(mainOpeningThisMonth + delta);
-                        } else if (date.slice(0, 7) === thisMonth) {
-                            if (delta > 0) {
-                                if (!isMonthEndSalary(transaction)) {
-                                    mainMonthIncome = roundMoney(mainMonthIncome + delta);
-                                }
-                            } else if (delta < 0) {
-                                mainMonthExpense = roundMoney(mainMonthExpense - delta);
-                            }
-                        }
+                    const delta = accountBalanceDelta(transaction);
+                    if (delta > 0 && !isMonthEndSalary(transaction)) {
+                        mainMonthIncome = roundMoney(mainMonthIncome + delta);
+                    } else if (delta < 0) {
+                        mainMonthExpense = roundMoney(mainMonthExpense - delta);
                     }
                 });
 
@@ -1292,24 +1296,28 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                     forecastEl.classList.remove('pill-neutral', 'pill-positive', 'pill-negative');
                     const today = todayDateKey();
                     const monthKey = m ? m.slice(1, 3) : '';
-                    const forecastRecords = transactionsForSpendingPeriod(
-                        txs, today.slice(0, 4), today.slice(5, 7)
-                    ).filter(transaction => matchesAccount(transaction));
                     const isCurrentMonthSelected = (!y || y === today.slice(0, 4)) && monthKey === today.slice(5, 7);
                     if (isCurrentMonthSelected) {
-                        const { income, expense } = getIncomeExpense(forecastRecords);
-                        const priorMonthSalary = roundMoney(forecastRecords
-                            .filter(isMonthEndSalary)
-                            .reduce((sum, transaction) => sum + transactionAmount(transaction), 0));
-                        const currentMonthIncome = roundMoney(income - priorMonthSalary);
+                        const monthStart = `${today.slice(0, 7)}-01`;
+                        const openingBalances = accountBalancesAtDate(monthStart, true);
+                        const forecastAccounts = a ? [a] : Object.keys(ACCOUNT_KEYS);
+                        const openingBalance = roundMoney(forecastAccounts.reduce((sum, account) => {
+                            return sum + toNumber(openingBalances[ACCOUNT_KEYS[account]]);
+                        }, 0));
+                        const monthToDateMovement = txs.reduce((sum, transaction) => {
+                            const date = validDateKey(transaction.Date);
+                            if (!date || date < monthStart || date > today || !matchesAccount(transaction) ||
+                                isMonthEndSalary(transaction)) return sum;
+                            return roundMoney(sum + accountBalanceDelta(transaction));
+                        }, 0);
                         const elapsed = Number(today.slice(8, 10));
-                        const projectedNet = priorMonthSalary +
-                            ((currentMonthIncome - expense) / elapsed) * daysInMonth(
+                        const projectedBalance = openingBalance +
+                            (monthToDateMovement / elapsed) * daysInMonth(
                                 Number(today.slice(0, 4)), Number(today.slice(5, 7))
                             );
-                        const isPos = projectedNet >= 0;
+                        const isPos = projectedBalance >= 0;
                         forecastEl.classList.add(isPos ? 'pill-positive' : 'pill-negative');
-                        forecastEl.innerText = `LKR ${formatMoney(Math.abs(projectedNet))}`;
+                        forecastEl.innerText = `LKR ${formatMoney(Math.abs(projectedBalance))}`;
                     } else {
                         forecastEl.classList.add('pill-neutral');
                         forecastEl.innerText = 'N/A for selected period';
@@ -1318,11 +1326,22 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const getAccountMovement = account => {
                     return reportData.filter(transaction => transaction.Account === account)
                         .reduce((sum, transaction) => {
-                            const direction = transaction.Type === 'Income' ? 1 : transaction.Type === 'Expense' ? -1 : 0;
-                            return sum + direction * transactionAmount(transaction);
+                            return sum + accountBalanceDelta(transaction);
                         }, 0);
                 };
-                const accountMovements = Object.keys(ACCOUNT_KEYS).map(account => [account, getAccountMovement(account)]);
+                const reportMonth = m ? m.slice(1, 3) : '';
+                const balanceDate = y
+                    ? reportMonth
+                        ? `${y}-${reportMonth}-${String(daysInMonth(y, reportMonth)).padStart(2, '0')}`
+                        : `${y}-12-31`
+                    : todayDateKey();
+                const balanceLabel = y ? 'Period-end balance' : 'Current balance';
+                const balancesAtReportEnd = accountBalancesAtDate(balanceDate);
+                const accountSummaries = Object.keys(ACCOUNT_KEYS).map(account => [
+                    account,
+                    balancesAtReportEnd[ACCOUNT_KEYS[account]],
+                    getAccountMovement(account)
+                ]);
                 const summaryBox = document.getElementById('reportSummary');
                 if (summaryBox) {
                     summaryBox.style.display = 'block';
@@ -1331,8 +1350,9 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 <span style="font-size:12px;">Income: <b style="color:var(--income)">${formatMoney(inc)}</b> | Expenses: <b style="color:var(--expense)">${formatMoney(exp)}</b></span>
                 <b id="repNet" style="color:${globalNet >= 0 ? 'var(--income)' : 'var(--expense)'}">Net: LKR ${formatMoney(Math.abs(globalNet))}</b>
             </div>
+            <small class="label-sm">${balanceLabel}</small>
             <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; text-align:center; margin-top:8px;">
-                ${accountMovements.map(([account, movement]) => `<div><small class="label-sm">${escapeHtml(account)}</small><br><b style="color:${movement >= 0 ? 'var(--income)' : 'var(--expense)'}">LKR ${formatMoney(Math.abs(movement))}</b></div>`).join('')}
+                ${accountSummaries.map(([account, balance, movement]) => `<div><small class="label-sm">${escapeHtml(account)}</small><br><b style="color:${balance >= 0 ? 'var(--income)' : 'var(--expense)'}">LKR ${formatMoney(Math.abs(balance))}</b><br><small style="color:${movement >= 0 ? 'var(--income)' : 'var(--expense)'}">Movement ${formatMoney(Math.abs(movement))}</small></div>`).join('')}
             </div>
         `;
                 }

@@ -549,7 +549,7 @@ export default function App() {
   <section id={"stats"} className={"page"}>
     <div className={"card forecast-card"}>
       <label className={"label-sm"}>
-        Monthly Forecast
+        Month-End Balance Forecast
       </label>
       <div id={"monthlyForecastValue"} className={"status-pill pill-neutral"}>
         
