@@ -1417,11 +1417,19 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const list = document.getElementById('recentList');
                 if (!list) return;
 
-                // This section is today's activity only; do not mix in earlier dates.
+                // Show all transactions from today and the previous local calendar day.
                 const today = todayDateKey();
-                const recent = sortTransactions(txs.filter(transaction =>
-                    validDateKey(transaction.Date) === today
-                ));
+                const yesterdayDate = new Date(`${today}T00:00:00Z`);
+                yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
+                const yesterday = [
+                    yesterdayDate.getUTCFullYear(),
+                    String(yesterdayDate.getUTCMonth() + 1).padStart(2, '0'),
+                    String(yesterdayDate.getUTCDate()).padStart(2, '0')
+                ].join('-');
+                const recent = sortTransactions(txs.filter(transaction => {
+                    const date = validDateKey(transaction.Date);
+                    return date === today || date === yesterday;
+                }));
 
                 if (recent.length === 0) {
                     list.innerHTML = '';
