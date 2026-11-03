@@ -80,6 +80,22 @@ export default function App() {
           <svg viewBox={"0 0 36 36"} className={"ring-svg"}>
             <circle className={"ring-bg"} cx={"18"} cy={"18"} r={"15.9155"}>
             </circle>
+            <circle id={"monthRing"} className={"ring-active monthly"} cx={"18"} cy={"18"} r={"15.9155"} strokeDasharray={"0, 100"}>
+            </circle>
+          </svg>
+          <div className={"ring-label"}>
+            <span id={"monthPct"} style={{fontSize: "14px"}}>
+              0%
+            </span>
+            <small style={{fontSize: "7px"}}>
+              Main Left
+            </small>
+          </div>
+        </div>
+        <div className={"progress-box"}>
+          <svg viewBox={"0 0 36 36"} className={"ring-svg"}>
+            <circle className={"ring-bg"} cx={"18"} cy={"18"} r={"15.9155"}>
+            </circle>
             <circle id={"overallRing"} className={"ring-active overall"} cx={"18"} cy={"18"} r={"15.9155"} strokeDasharray={"0, 100"}>
             </circle>
           </svg>
@@ -105,22 +121,6 @@ export default function App() {
             </span>
             <small style={{fontSize: "7px"}}>
               Physical
-            </small>
-          </div>
-        </div>
-        <div className={"progress-box"}>
-          <svg viewBox={"0 0 36 36"} className={"ring-svg"}>
-            <circle className={"ring-bg"} cx={"18"} cy={"18"} r={"15.9155"}>
-            </circle>
-            <circle id={"monthRing"} className={"ring-active monthly"} cx={"18"} cy={"18"} r={"15.9155"} strokeDasharray={"0, 100"}>
-            </circle>
-          </svg>
-          <div className={"ring-label"}>
-            <span id={"monthPct"} style={{fontSize: "14px"}}>
-              0%
-            </span>
-            <small style={{fontSize: "7px"}}>
-              Main Left
             </small>
           </div>
         </div>
