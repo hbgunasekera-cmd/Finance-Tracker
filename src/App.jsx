@@ -29,9 +29,6 @@ export default function App() {
       <h2 style={{marginBottom: "5px"}}>
         Finance Vault
       </h2>
-      <p style={{color: "var(--sub)", fontSize: "12px", marginBottom: "25px"}}>
-        Enter credentials to unlock
-      </p>
     </center>
     <label className={"label-sm"}>
       Username
@@ -455,9 +452,6 @@ export default function App() {
         <div id={"anSaveRate"} style={{fontSize: "20px", fontWeight: "800"}}>
           0%
         </div>
-        <small id={"saveBench"} style={{color: "var(--sub)"}}>
-          vs 20% Goal
-        </small>
       </div>
       <div className={"card"}>
         <label className={"label-sm"}>
@@ -501,10 +495,6 @@ export default function App() {
           </b>
         </div>
       </div>
-      <center>
-        <small id={"daysLeftNote"} style={{display: "block", marginTop: "10px", fontSize: "10px", color: "var(--sub)", textTransform: "none"}}>
-        </small>
-      </center>
     </div>
     <div className={"card"}>
       <label className={"label-sm"}>
@@ -566,13 +556,6 @@ export default function App() {
                     Analyzing...
                 
       </div>
-      <div style={{marginTop: "10px"}}>
-        <small style={{color: "var(--sub)", fontSize: "11px"}}>
-          
-                        Uses last month's month-end salary plus current-month income and expenses; this month's ending salary rolls forward
-                    
-        </small>
-      </div>
     </div>
     <div id={"reportSummary"} style={{display: "none", background: "var(--accent)", padding: "15px", borderRadius: "15px", marginBottom: "15px", border: "1px solid var(--border)"}}>
       <div style={{display: "flex", justifyContent: "space-between", marginBottom: "8px"}}>
@@ -602,11 +585,8 @@ export default function App() {
     </div>
     <div className={"card"}>
       <label className={"label-sm"}>
-        Spending Period Filters
+        Filters
       </label>
-      <small className={"label-sm"} style={{display: "block", margin: "6px 0 10px", lineHeight: "1.5"}}>
-        Salary received on a month’s final day is included in the following month’s spending report. Transaction rows keep their actual dates.
-      </small>
       <div className={"f-grid"} style={{gap: "8px"}}>
         <select id={"fYear"} onChange={(event) => { window.updateReportMonthOptions(true); window.runReport(); }}>
         </select>
@@ -654,9 +634,6 @@ export default function App() {
       <h3>
         Opening Balances
       </h3>
-      <small style={{display: "block", color: "var(--sub)", marginBottom: "12px", lineHeight: "1.5"}}>
-        Set balances immediately before the earliest saved transaction. Account balances add recorded activity through today; crypto value is holdings × the USDT/LKR rate.
-      </small>
       <div className={"f-grid"}>
         <div>
           <label className={"label-sm"}>

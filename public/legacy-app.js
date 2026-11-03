@@ -658,7 +658,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const chartEl = document.getElementById(chartId);
                 if (chartEl) chartEl.style.background = total > 0 ? `conic-gradient(${gradient.join(', ')})` : 'var(--border)';
                 const legend = document.getElementById(legendId);
-                if (legend) legend.innerHTML = total > 0 ? legendHtml : '<center style="grid-column: span 2;">No Data</center>';
+                if (legend) legend.innerHTML = total > 0 ? legendHtml : '';
             }
 
             // --- NAVIGATION ---
@@ -1177,19 +1177,16 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 <div style="display:flex; justify-content:space-between; font-size:11px;"><span>${escapeHtml(category)}</span><span>${formatMoney(percent)}%</span></div>
                 <div style="width:100%; height:6px; background:var(--border); border-radius:4px;"><div style="width:${percent}%; height:100%; background:var(--primary); border-radius:4px;"></div></div>
             </div>`;
-                }).join('') || '<small style="color:var(--sub)">No operating expenses in this period.</small>';
+                }).join('');
 
                 const topCategory = categories[0]?.[0];
-                const performanceNote = saveRate === null
-                    ? 'Record spend-cycle income to calculate a savings rate.'
-                    : saveRate < 0 ? 'Recorded operating expenses exceed spend-cycle income.'
-                        : saveRate < 20 ? 'Less than 20% of spend-cycle income remains after expenses.'
-                            : 'At least 20% of spend-cycle income remains after expenses.';
-                document.getElementById('anInsights').innerHTML = `
-        Spend-cycle income <b>LKR ${formatMoney(income)}</b> · operating expenses <b>LKR ${formatMoney(expense)}</b>.
-        ${topCategory ? `Largest expense category: <b>${escapeHtml(topCategory)}</b>.` : 'No operating expense category recorded.'}
-        ${escapeHtml(performanceNote)} Savings rate is (spend-cycle income − expenses) ÷ spend-cycle income. Salary received on the final day of a month is counted in the following month's spend cycle. Transfers and loan principal are excluded; record loan interest separately as an expense.
-    `;
+                const insightParts = [
+                    `Income <b>LKR ${formatMoney(income)}</b>`,
+                    `Expenses <b>LKR ${formatMoney(expense)}</b>`,
+                    `Savings rate <b>${saveRate === null ? '—' : `${formatMoney(saveRate)}%`}</b>`
+                ];
+                if (topCategory) insightParts.push(`Top category <b>${escapeHtml(topCategory)}</b>`);
+                document.getElementById('anInsights').innerHTML = insightParts.join(' · ');
 
                 const dateParts = today.split('-').map(Number);
                 const daysRemaining = daysInMonth(dateParts[0], dateParts[1]) - dateParts[2] + 1;
@@ -1209,8 +1206,6 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 dailyTotalEl.style.color = dailyTotal >= 0 ? 'var(--income)' : 'var(--expense)';
                 document.getElementById('anDailyMain').innerText = formatDaily(dailyMainBalance / daysRemaining);
                 document.getElementById('anDailySave').innerText = formatDaily(dailySavingBalance / daysRemaining);
-                document.getElementById('daysLeftNote').innerText = `Guide: Main + Saving balances available for this spend cycle ÷ ${daysRemaining} remaining calendar day${daysRemaining === 1 ? '' : 's'}, including today. Month-end salary is reserved for next month; upcoming bills are not deducted.`;
-
                 renderSubPie(txs.filter(t => {
                     const date = validDateKey(t.Date);
                     return date && date <= today;
@@ -1333,10 +1328,9 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                     summaryBox.style.display = 'block';
                     summaryBox.innerHTML = `
             <div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
-                <span style="font-size:12px;">Spend-cycle income: <b style="color:var(--income)">${formatMoney(inc)}</b> | expenses: <b style="color:var(--expense)">${formatMoney(exp)}</b></span>
-                <b id="repNet" style="color:${globalNet >= 0 ? 'var(--income)' : 'var(--expense)'}">Spend-cycle net: LKR ${formatMoney(Math.abs(globalNet))}</b>
+                <span style="font-size:12px;">Income: <b style="color:var(--income)">${formatMoney(inc)}</b> | Expenses: <b style="color:var(--expense)">${formatMoney(exp)}</b></span>
+                <b id="repNet" style="color:${globalNet >= 0 ? 'var(--income)' : 'var(--expense)'}">Net: LKR ${formatMoney(Math.abs(globalNet))}</b>
             </div>
-            <small class="label-sm">Operating net = income − expenses; transfers and loan principal are excluded. Account movement covers these spending-cycle records and includes transfers and loan principal.</small>
             <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; text-align:center; margin-top:8px;">
                 ${accountMovements.map(([account, movement]) => `<div><small class="label-sm">${escapeHtml(account)}</small><br><b style="color:${movement >= 0 ? 'var(--income)' : 'var(--expense)'}">LKR ${formatMoney(Math.abs(movement))}</b></div>`).join('')}
             </div>
@@ -1360,7 +1354,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                     ${isCurrentMonthTransaction(x) ? `<button onclick="delTx('${escapeHtml(x.id)}')" class="btn-del" aria-label="Delete transaction" title="Delete transaction">×</button>` : ''}
                 </div>
             </div>
-        `).join('') : "<center style='padding:20px;'><small style='color:var(--sub)'>No records found for these filters.</small></center>";
+        `).join('') : '';
                 }
             }
 
@@ -1410,7 +1404,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 ));
 
                 if (recent.length === 0) {
-                    list.innerHTML = "<center><small style='color:var(--sub)'>No transactions recorded today</small></center>";
+                    list.innerHTML = '';
                     return;
                 }
 
@@ -1435,9 +1429,12 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const container = document.getElementById('loanStatusList');
                 // Only display 'Active' status records to keep dashboard clean
                 const activeLoans = loans.filter(l => l.Status === 'Active' && roundMoney(l.Amount) > 0);
+                if (container?.parentElement) {
+                    container.parentElement.style.display = activeLoans.length ? '' : 'none';
+                }
 
                 if (activeLoans.length === 0) {
-                    container.innerHTML = "<small style='color:var(--sub)'>No active debts or Lending.</small>";
+                    container.innerHTML = '';
                     return;
                 }
 
@@ -1486,7 +1483,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                     <div>
                         <label class="label-sm">${escapeHtml(asset.Category || 'Other')}</label>
                         <b style="font-size:14px;">${escapeHtml(asset.Name || 'Unnamed asset')}</b><br>
-                        <small style="color:var(--sub)">${escapeHtml(asset.Specs || 'No Specs')}</small>
+                        ${asset.Specs ? `<small style="color:var(--sub)">${escapeHtml(asset.Specs)}</small>` : ''}
                     </div>
                     <div style="text-align:right">
                         <div style="font-weight:800; color:var(--primary);">LKR ${formatMoney(currentValue)}</div>
@@ -1515,7 +1512,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                         <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
                             <span><b>${escapeHtml(vehicle.Registration || 'Unregistered')}</b>${vehicle.Model ? ` · ${escapeHtml(vehicle.Model)}` : ''}</span>
                             <button onclick="delVehicle('${escapeHtml(vehicle.id)}')" class="btn-del" aria-label="Remove vehicle">×</button>
-                        </div>`).join('') : '<small style="color:var(--sub)">No vehicles registered.</small>';
+                        </div>`).join('') : '';
                 }
             }
 
