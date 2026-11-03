@@ -602,8 +602,11 @@ export default function App() {
     </div>
     <div className={"card"}>
       <label className={"label-sm"}>
-        Filters
+        Spending Period Filters
       </label>
+      <small className={"label-sm"} style={{display: "block", margin: "6px 0 10px", lineHeight: "1.5"}}>
+        Salary received on a month’s final day is included in the following month’s spending report. Transaction rows keep their actual dates.
+      </small>
       <div className={"f-grid"} style={{gap: "8px"}}>
         <select id={"fYear"} onChange={(event) => { window.updateReportMonthOptions(true); window.runReport(); }}>
         </select>

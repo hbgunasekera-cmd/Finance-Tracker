@@ -1230,9 +1230,9 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const selectedMonth = monthSelect.value;
                 const monthCounts = new Map();
                 txs.forEach(transaction => {
-                    const date = validDateKey(transaction.Date);
-                    if (!date || (selectedYear && !date.startsWith(selectedYear))) return;
-                    const month = date.slice(5, 7);
+                    const spendingMonth = spendingPeriodMonth(transaction);
+                    if (!spendingMonth || (selectedYear && !spendingMonth.startsWith(selectedYear))) return;
+                    const month = spendingMonth.slice(5, 7);
                     monthCounts.set(month, (monthCounts.get(month) || 0) + 1);
                 });
 
@@ -1253,7 +1253,7 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const thisYear = todayDateKey().slice(0, 4);
                 const years = [...new Set([
                     thisYear,
-                    ...txs.map(t => validDateKey(t.Date)).filter(Boolean).map(date => date.slice(0, 4))
+                    ...txs.map(spendingPeriodMonth).filter(Boolean).map(month => month.slice(0, 4))
                 ])].sort((a, b) => Number(b) - Number(a));
                 const yearOptions = years.map(year => `<option value="${year}">${year}</option>`).join('');
                 document.getElementById('fYear').innerHTML = `<option value="">All Years</option>${yearOptions}`;
@@ -1277,17 +1277,17 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                 const t = document.getElementById('fType').value;
                 const a = document.getElementById('fAcc').value;
                 const k = document.getElementById('fKey').value.trim().toLocaleLowerCase();
-                const matchesDate = transaction => {
-                    const date = validDateKey(transaction.Date);
-                    return date && (!y || date.startsWith(y)) &&
-                        (!m || date.slice(5, 7) === m.slice(1, 3));
+                const matchesPeriod = transaction => {
+                    const spendingMonth = spendingPeriodMonth(transaction);
+                    return spendingMonth && (!y || spendingMonth.startsWith(y)) &&
+                        (!m || spendingMonth.slice(5, 7) === m.slice(1, 3));
                 };
                 const matchesAccount = transaction => !a || transaction.Account === a;
                 const filtered = txs.filter(x => {
-                    const matchDate = matchesDate(x);
+                    const matchPeriod = matchesPeriod(x);
                     const matchType = !t || x.Type === t;
                     const searchable = [x.Remark, x.Subcategory, x.Category, x.Person_Name].join(' ').toLocaleLowerCase();
-                    return matchDate && matchType && matchesAccount(x) && (!k || searchable.includes(k));
+                    return matchPeriod && matchType && matchesAccount(x) && (!k || searchable.includes(k));
                 });
                 reportData = filtered.sort((left, right) => String(right.Date).localeCompare(String(left.Date)));
                 const { income: inc, expense: exp } = getIncomeExpense(reportData);
@@ -1333,10 +1333,10 @@ const supa = supabase.createClient('https://hskramdwzubiteautnkw.supabase.co', '
                     summaryBox.style.display = 'block';
                     summaryBox.innerHTML = `
             <div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
-                <span style="font-size:12px;">Income: <b style="color:var(--income)">${formatMoney(inc)}</b> | Expenses: <b style="color:var(--expense)">${formatMoney(exp)}</b></span>
-                <b id="repNet" style="color:${globalNet >= 0 ? 'var(--income)' : 'var(--expense)'}">Net: LKR ${formatMoney(Math.abs(globalNet))}</b>
+                <span style="font-size:12px;">Spend-cycle income: <b style="color:var(--income)">${formatMoney(inc)}</b> | expenses: <b style="color:var(--expense)">${formatMoney(exp)}</b></span>
+                <b id="repNet" style="color:${globalNet >= 0 ? 'var(--income)' : 'var(--expense)'}">Spend-cycle net: LKR ${formatMoney(Math.abs(globalNet))}</b>
             </div>
-            <small class="label-sm">Account movement for matching records; includes transfers.</small>
+            <small class="label-sm">Operating net = income − expenses; transfers and loan principal are excluded. Account movement covers these spending-cycle records and includes transfers and loan principal.</small>
             <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; text-align:center; margin-top:8px;">
                 ${accountMovements.map(([account, movement]) => `<div><small class="label-sm">${escapeHtml(account)}</small><br><b style="color:${movement >= 0 ? 'var(--income)' : 'var(--expense)'}">LKR ${formatMoney(Math.abs(movement))}</b></div>`).join('')}
             </div>
